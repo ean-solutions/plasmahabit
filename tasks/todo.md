@@ -58,11 +58,11 @@ See [`tasks/plan.md`](file:///home/Eze/projects/plasmahabit/tasks/plan.md) for a
 
 ## Phase 3: Vertical Feature Slices (Qt Model + Kirigami UI)
 
-- [ ] **Task 5: Expose Habit List Model with Create & Archive Actions**
+- [x] **Task 5: Expose Habit List Model with Create & Archive Actions**
   - **Acceptance:**
-    - [ ] `HabitModel` exposes habit rows filtered by `showArchived` state and computes live `currentStreak` and `longestStreak` via `StreakCalculator`.
-    - [ ] Calling `addHabit(name, frequencyType, targetCount, colorHex)` and `setHabitArchived(id, archived)` persists changes in SQLite and emits model update signals immediately.
-    - [ ] `src/main.cpp` initializes `DatabaseManager` in `QStandardPaths::AppLocalDataLocation` and exposes `HabitModel` to `Main.qml`.
+    - [x] `HabitModel` exposes habit rows filtered by `showArchived` state and computes live `currentStreak` and `longestStreak` via `StreakCalculator`.
+    - [x] Calling `addHabit(name, frequencyType, targetCount, colorHex)` and `setHabitArchived(id, archived)` persists changes in SQLite and emits model update signals immediately.
+    - [x] `src/main.cpp` initializes `DatabaseManager` in `QStandardPaths::AppLocalDataLocation` and exposes `HabitModel` to `Main.qml`.
   - **Verify:** `cmake --build build --parallel && ctest --test-dir build --output-on-failure`
   - **Dependencies:** Task 3, Task 4
   - **Files:** `src/models/HabitModel.h`, `src/models/HabitModel.cpp`, `src/CMakeLists.txt`, `src/main.cpp` (Medium: 4 files)

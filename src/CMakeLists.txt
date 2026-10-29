@@ -1,6 +1,7 @@
 add_library(plasmahabit_core STATIC
     domain/StreakCalculator.cpp
     db/DatabaseManager.cpp
+    models/HabitModel.cpp
 )
 
 target_include_directories(plasmahabit_core PUBLIC

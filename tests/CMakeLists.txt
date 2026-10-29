@@ -22,3 +22,16 @@ target_link_libraries(tst_databasemanager PRIVATE
 )
 
 add_test(NAME tst_databasemanager COMMAND tst_databasemanager)
+
+add_executable(tst_habitmodel
+    tst_habitmodel.cpp
+)
+
+target_link_libraries(tst_habitmodel PRIVATE
+    plasmahabit_core
+    Qt6::Core
+    Qt6::Sql
+    Qt6::Test
+)
+
+add_test(NAME tst_habitmodel COMMAND tst_habitmodel)
