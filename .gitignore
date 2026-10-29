@@ -1,0 +1,46 @@
+# Build directories
+build/
+build-*/
+bin/
+lib/
+
+# CMake generated files
+CMakeCache.txt
+CMakeFiles/
+CMakeScripts/
+Testing/
+Makefile
+cmake_install.cmake
+install_manifest.txt
+compile_commands.json
+CTestTestfile.cmake
+
+# Qt / KDE build artifacts and MOC/RCC files
+*.moc
+moc_*.cpp
+moc_*.h
+qrc_*.cpp
+ui_*.h
+*.qmlc
+*.jsc
+.rcc/
+
+# SQLite databases & WAL files
+*.sqlite
+*.sqlite3
+*.sqlite3-wal
+*.sqlite3-shm
+*.db
+
+# IDE and editor settings
+.vscode/
+.idea/
+*.swp
+*~
+*.user
+*.user.*
+.directory
+
+# OS specific files
+.DS_Store
+Thumbs.db
