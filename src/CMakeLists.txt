@@ -1,5 +1,6 @@
 add_library(plasmahabit_core STATIC
     domain/StreakCalculator.cpp
+    db/DatabaseManager.cpp
 )
 
 target_include_directories(plasmahabit_core PUBLIC
@@ -8,6 +9,7 @@ target_include_directories(plasmahabit_core PUBLIC
 
 target_link_libraries(plasmahabit_core PUBLIC
     Qt6::Core
+    Qt6::Sql
 )
 
 add_executable(plasmahabit

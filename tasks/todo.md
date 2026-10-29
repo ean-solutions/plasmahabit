@@ -40,19 +40,19 @@ See [`tasks/plan.md`](file:///home/Eze/projects/plasmahabit/tasks/plan.md) for a
   - **Dependencies:** Task 2
   - **Files:** `src/domain/StreakCalculator.h`, `src/domain/StreakCalculator.cpp`, `tests/CMakeLists.txt`, `tests/tst_streakcalculator.cpp` (Medium: 4 files)
 
-- [ ] **Task 4: Implement and Integration-Test Local SQLite Database Manager**
+- [x] **Task 4: Implement and Integration-Test Local SQLite Database Manager**
   - **Acceptance:**
-    - [ ] `DatabaseManager` creates the SQLite file and schema automatically with `PRAGMA foreign_keys = ON` and `PRAGMA journal_mode = WAL`, using parameterized `QSqlQuery` statements exclusively.
-    - [ ] Toggling a date (`<= today`) inserts a completion if absent or deletes it if present, while rejecting future dates (`> today`).
-    - [ ] Archiving sets `is_archived = 1` without deleting any `habit_completions` records for that habit.
+    - [x] `DatabaseManager` creates the SQLite file and schema automatically with `PRAGMA foreign_keys = ON` and `PRAGMA journal_mode = WAL`, using parameterized `QSqlQuery` statements exclusively.
+    - [x] Toggling a date (`<= today`) inserts a completion if absent or deletes it if present, while rejecting future dates (`> today`).
+    - [x] Archiving sets `is_archived = 1` without deleting any `habit_completions` records for that habit.
   - **Verify:** `cmake --build build --parallel && ctest --test-dir build -R tst_databasemanager --output-on-failure`
   - **Dependencies:** Task 2
   - **Files:** `src/db/DatabaseManager.h`, `src/db/DatabaseManager.cpp`, `tests/CMakeLists.txt`, `tests/tst_databasemanager.cpp` (Medium: 4 files)
 
 ### Checkpoint: Domain & Persistence (After Tasks 3–4)
-- [ ] All unit and integration tests (`tst_streakcalculator` and `tst_databasemanager`) pass via `ctest`
-- [ ] Application builds cleanly with zero SQL injection vectors or unparameterized queries
-- [ ] Review with human before proceeding if needed
+- [x] All unit and integration tests (`tst_streakcalculator` and `tst_databasemanager`) pass via `ctest`
+- [x] Application builds cleanly with zero SQL injection vectors or unparameterized queries
+- [x] Review with human before proceeding if needed
 
 ---
 
