@@ -1,9 +1,22 @@
+add_library(plasmahabit_core STATIC
+    domain/StreakCalculator.cpp
+)
+
+target_include_directories(plasmahabit_core PUBLIC
+    ${CMAKE_CURRENT_SOURCE_DIR}
+)
+
+target_link_libraries(plasmahabit_core PUBLIC
+    Qt6::Core
+)
+
 add_executable(plasmahabit
     main.cpp
     resources.qrc
 )
 
 target_link_libraries(plasmahabit PRIVATE
+    plasmahabit_core
     Qt6::Core
     Qt6::Gui
     Qt6::Qml

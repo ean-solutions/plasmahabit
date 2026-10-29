@@ -31,11 +31,11 @@ See [`tasks/plan.md`](file:///home/Eze/projects/plasmahabit/tasks/plan.md) for a
 
 ## Phase 2: Domain Streak Engine & Local SQLite Persistence
 
-- [ ] **Task 3: Implement and Unit-Test Daily & Weekly Streak Calculator**
+- [x] **Task 3: Implement and Unit-Test Daily & Weekly Streak Calculator**
   - **Acceptance:**
-    - [ ] Daily habits keep their streak alive through `today` if `today - 1` was completed, increment on `today` completion, and strictly reset `currentStreak` to `0` if `today - 1` was missed and `today` is uncompleted.
-    - [ ] Weekly habits (`1..7` per Mon–Sun week) count consecutive weeks meeting `>= N` completions, keep prior streak alive mid-week while `c_cur + r_cur >= N`, and strictly reset `currentStreak` to `0` immediately when `c_cur + r_cur < N` or when the prior week finished `< N`.
-    - [ ] Retroactive date additions/removals in the completion set accurately recompute both `currentStreak` and `longestStreak`.
+    - [x] Daily habits keep their streak alive through `today` if `today - 1` was completed, increment on `today` completion, and strictly reset `currentStreak` to `0` if `today - 1` was missed and `today` is uncompleted.
+    - [x] Weekly habits (`1..7` per Mon–Sun week) count consecutive weeks meeting `>= N` completions, keep prior streak alive mid-week while `c_cur + r_cur >= N`, and strictly reset `currentStreak` to `0` immediately when `c_cur + r_cur < N` or when the prior week finished `< N`.
+    - [x] Retroactive date additions/removals in the completion set accurately recompute both `currentStreak` and `longestStreak`.
   - **Verify:** `cmake --build build --parallel && ctest --test-dir build -R tst_streakcalculator --output-on-failure`
   - **Dependencies:** Task 2
   - **Files:** `src/domain/StreakCalculator.h`, `src/domain/StreakCalculator.cpp`, `tests/CMakeLists.txt`, `tests/tst_streakcalculator.cpp` (Medium: 4 files)
