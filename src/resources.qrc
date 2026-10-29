@@ -1,0 +1,5 @@
+<RCC>
+    <qresource prefix="/qt/qml/org/eansolutions/plasmahabit">
+        <file>ui/Main.qml</file>
+    </qresource>
+</RCC>

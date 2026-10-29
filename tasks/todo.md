@@ -13,19 +13,19 @@ See [`tasks/plan.md`](file:///home/Eze/projects/plasmahabit/tasks/plan.md) for a
   - **Dependencies:** None
   - **Files:** `CMakeLists.txt`, `org.eansolutions.plasmahabit.desktop`, `org.eansolutions.plasmahabit.metainfo.xml` (Medium: 3 files)
 
-- [ ] **Task 2: Create Application Entry Point, QRC Resources, and Kirigami Window Shell**
+- [x] **Task 2: Create Application Entry Point, QRC Resources, and Kirigami Window Shell**
   - **Acceptance:**
-    - [ ] `src/main.cpp` sets organization name `eansolutions`, domain `eansolutions.org`, app name `plasmahabit`, configures `KLocalizedString`, and safely loads `qrc:/qt/qml/org/eansolutions/plasmahabit/ui/Main.qml`.
-    - [ ] `src/resources.qrc` registers `ui/Main.qml` under prefix `/qt/qml/org/eansolutions/plasmahabit`.
-    - [ ] Project compiles cleanly and starts in offscreen mode with `Main.qml` instantiating a valid `Kirigami.ApplicationWindow`.
+    - [x] `src/main.cpp` sets organization name `eansolutions`, domain `eansolutions.org`, app name `plasmahabit`, configures `KLocalizedString`, and safely loads `qrc:/qt/qml/org/eansolutions/plasmahabit/ui/Main.qml`.
+    - [x] `src/resources.qrc` registers `ui/Main.qml` under prefix `/qt/qml/org/eansolutions/plasmahabit`.
+    - [x] Project compiles cleanly and starts in offscreen mode with `Main.qml` instantiating a valid `Kirigami.ApplicationWindow`.
   - **Verify:** `cmake -B build -DCMAKE_BUILD_TYPE=Debug && cmake --build build --parallel && (QT_QPA_PLATFORM=offscreen timeout 2s ./build/bin/plasmahabit || [ $? -eq 124 ])`
   - **Dependencies:** Task 1
   - **Files:** `src/CMakeLists.txt`, `src/main.cpp`, `src/resources.qrc`, `src/ui/Main.qml` (Medium: 4 files)
 
 ### Checkpoint: Foundation (After Tasks 1–2)
-- [ ] Root and `src/` CMake targets configure and build without errors or warnings
-- [ ] `plasmahabit` binary loads `qrc:/qt/qml/org/eansolutions/plasmahabit/ui/Main.qml` and verifies root object creation
-- [ ] Review with human before proceeding if needed
+- [x] Root and `src/` CMake targets configure and build without errors or warnings
+- [x] `plasmahabit` binary loads `qrc:/qt/qml/org/eansolutions/plasmahabit/ui/Main.qml` and verifies root object creation
+- [x] Review with human before proceeding if needed
 
 ---
 
