@@ -67,26 +67,26 @@ See [`tasks/plan.md`](file:///home/Eze/projects/plasmahabit/tasks/plan.md) for a
   - **Dependencies:** Task 3, Task 4
   - **Files:** `src/models/HabitModel.h`, `src/models/HabitModel.cpp`, `src/CMakeLists.txt`, `src/main.cpp` (Medium: 4 files)
 
-- [ ] **Task 6: Build Per-Habit Binary Heatmap & Retroactive Completion Toggling in QML**
+- [x] **Task 6: Build Per-Habit Binary Heatmap & Retroactive Completion Toggling in QML**
   - **Acceptance:**
-    - [ ] Each habit card displays its 52-week Monday–Sunday binary heatmap colored with the habit's accent color for completed days and muted cells for uncompleted/future days.
-    - [ ] Clicking today or any past cell on a habit's heatmap (or the "Done Today" button) toggles the SQLite record and immediately updates the cell color, `currentStreak`, and `longestStreak`.
-    - [ ] Clicking future cells (`> today`) in the current week is disabled and does not record a completion.
+    - [x] Each habit card displays its 52-week Monday–Sunday binary heatmap colored with the habit's accent color for completed days and muted cells for uncompleted/future days.
+    - [x] Clicking today or any past cell on a habit's heatmap (or the "Done Today" button) toggles the SQLite record and immediately updates the cell color, `currentStreak`, and `longestStreak`.
+    - [x] Clicking future cells (`> today`) in the current week is disabled and does not record a completion.
   - **Verify:** `cmake --build build --parallel && ctest --test-dir build --output-on-failure`
   - **Dependencies:** Task 5
   - **Files:** `src/models/HabitModel.h`, `src/models/HabitModel.cpp`, `src/ui/Main.qml` (Medium: 3 files)
 
-- [ ] **Task 7: Build Global Combined Intensity Heatmap, Create Habit Dialog, and Archive View**
+- [x] **Task 7: Build Global Combined Intensity Heatmap, Create Habit Dialog, and Archive View**
   - **Acceptance:**
-    - [ ] The top Global Combined Heatmap renders a 52-week Monday–Sunday grid whose cell color intensity (`0..4`) updates immediately whenever any active habit's completion is toggled.
-    - [ ] The "+ New Habit" dialog validates non-empty habit names, allows configuring `Daily (1x/day)` or `Weekly (1..7/week)` and color, and adds the habit to the dashboard immediately.
-    - [ ] Users can switch between Active and Archived habits, archive/unarchive habits without losing completion history, and see a helpful `Kirigami.PlaceholderMessage` when no habits exist.
+    - [x] The top Global Combined Heatmap renders a 52-week Monday–Sunday grid whose cell color intensity (`0..4`) updates immediately whenever any active habit's completion is toggled.
+    - [x] The "+ New Habit" dialog validates non-empty habit names, allows configuring `Daily (1x/day)` or `Weekly (1..7/week)` and color, and adds the habit to the dashboard immediately.
+    - [x] Users can switch between Active and Archived habits, archive/unarchive habits without losing completion history, and see a helpful `Kirigami.PlaceholderMessage` when no habits exist.
   - **Verify:** `cmake --build build --parallel && ctest --test-dir build --output-on-failure`
   - **Dependencies:** Task 6
   - **Files:** `src/models/HabitModel.h`, `src/models/HabitModel.cpp`, `src/ui/Main.qml` (Medium: 3 files)
 
 ### Checkpoint: Complete (After Tasks 5–7)
-- [ ] All unit and integration tests pass (`ctest --test-dir build --output-on-failure`)
-- [ ] Application builds cleanly and starts without QML or SQLite errors
-- [ ] All acceptance criteria in `SPEC.md` are met
-- [ ] Ready for human review
+- [x] All unit and integration tests pass (`ctest --test-dir build --output-on-failure`)
+- [x] Application builds cleanly and starts without QML or SQLite errors
+- [x] All acceptance criteria in `SPEC.md` are met
+- [x] Ready for human review
