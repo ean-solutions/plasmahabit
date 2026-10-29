@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>org.eansolutions.plasmahabit</id>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>GPL-3.0-or-later</project_license>
+  <name>PlasmaHabit</name>
+  <summary>Privacy-first local habit tracker with GitHub-style heatmaps</summary>
+  <description>
+    <p>
+      PlasmaHabit is a fast, privacy-first, single-user habit tracker running locally on KDE Plasma.
+      It persists all data exclusively in an on-disk SQLite database and visualizes daily completions on
+      GitHub-style contribution heatmaps. Track honest streaks that strictly reset when a required day or week is missed.
+    </p>
+  </description>
+  <url type="homepage">https://eansolutions.org</url>
+  <content_rating type="oars-1.1"/>
+  <launchable type="desktop-id">org.eansolutions.plasmahabit.desktop</launchable>
+  <developer id="org.eansolutions">
+    <name>eansolutions</name>
+  </developer>
+  <provides>
+    <binary>plasmahabit</binary>
+  </provides>
+</component>

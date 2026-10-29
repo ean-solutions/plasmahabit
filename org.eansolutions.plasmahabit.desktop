@@ -1,0 +1,11 @@
+[Desktop Entry]
+Name=PlasmaHabit
+GenericName=Habit Tracker
+Comment=Fast, privacy-first habit tracker with contribution heatmaps
+Exec=plasmahabit
+Icon=org.eansolutions.plasmahabit
+Type=Application
+Terminal=false
+Categories=Qt;KDE;Utility;
+StartupNotify=true
+X-KDE-StartupNotify=true
