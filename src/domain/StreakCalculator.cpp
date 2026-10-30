@@ -49,18 +49,28 @@ StreakStats calculateDaily(const QSet<QDate> &completions, const QDate &today)
     return StreakStats{currentStreak, longestStreak};
 }
 
-// Helper to get Monday of the ISO week containing date
-QDate mondayOfWeek(const QDate &date)
+// Helper to get day offset (0..6) from weekStartDay
+int dayOffsetInWeek(const QDate &date, Qt::DayOfWeek weekStartDay)
 {
-    // QDate::dayOfWeek(): 1 = Monday .. 7 = Sunday
-    return date.addDays(-(date.dayOfWeek() - 1));
+    if (weekStartDay == Qt::Sunday) {
+        // Qt::Sunday is 7. If date is Sunday (7), offset is 0. If Monday (1), offset is 1.
+        return date.dayOfWeek() % 7;
+    }
+    // Qt::Monday is 1. If date is Monday (1), offset is 0. If Sunday (7), offset is 6.
+    return date.dayOfWeek() - 1;
 }
 
-int completionsInWeek(const QDate &monday, const QSet<QDate> &completions, const QDate &limitDate = QDate())
+// Helper to get start of the week containing date
+QDate startOfWeek(const QDate &date, Qt::DayOfWeek weekStartDay)
+{
+    return date.addDays(-dayOffsetInWeek(date, weekStartDay));
+}
+
+int completionsInWeek(const QDate &weekStart, const QSet<QDate> &completions, const QDate &limitDate = QDate())
 {
     int count = 0;
     for (int d = 0; d < 7; ++d) {
-        const QDate day = monday.addDays(d);
+        const QDate day = weekStart.addDays(d);
         if (limitDate.isValid() && day > limitDate) {
             continue;
         }
@@ -71,28 +81,29 @@ int completionsInWeek(const QDate &monday, const QSet<QDate> &completions, const
     return count;
 }
 
-StreakStats calculateWeekly(int targetCount, const QSet<QDate> &completions, const QDate &today)
+StreakStats calculateWeekly(int targetCount, const QSet<QDate> &completions, const QDate &today, Qt::DayOfWeek weekStartDay)
 {
     if (targetCount <= 0) {
         return StreakStats{0, 0};
     }
 
-    const QDate currentMon = mondayOfWeek(today);
+    const QDate curWeekStart = startOfWeek(today, weekStartDay);
+    const int todayOffset = dayOffsetInWeek(today, weekStartDay);
 
     // Current week analysis (count only completions up to today)
-    int c_cur = completionsInWeek(currentMon, completions, today);
+    int c_cur = completionsInWeek(curWeekStart, completions, today);
     int r_cur = 0;
     if (completions.contains(today)) {
-        r_cur = 7 - today.dayOfWeek();
+        r_cur = 6 - todayOffset;
     } else {
-        r_cur = 7 - today.dayOfWeek() + 1;
+        r_cur = 7 - todayOffset;
     }
 
     int priorChain = 0;
-    QDate wMon = currentMon.addDays(-7);
-    while (completionsInWeek(wMon, completions) >= targetCount) {
+    QDate wStart = curWeekStart.addDays(-7);
+    while (completionsInWeek(wStart, completions) >= targetCount) {
         priorChain++;
-        wMon = wMon.addDays(-7);
+        wStart = wStart.addDays(-7);
     }
 
     int currentStreak = 0;
@@ -112,22 +123,22 @@ StreakStats calculateWeekly(int targetCount, const QSet<QDate> &completions, con
         return StreakStats{currentStreak, 0};
     }
 
-    // Find earliest and latest Monday represented in completions
+    // Find earliest and latest start of week represented in completions
     QDate earliestDate = *std::min_element(completions.begin(), completions.end());
     QDate latestDate = *std::max_element(completions.begin(), completions.end());
 
-    QDate startMon = mondayOfWeek(earliestDate);
-    QDate endMon = mondayOfWeek(latestDate);
+    QDate startW = startOfWeek(earliestDate, weekStartDay);
+    QDate endW = startOfWeek(latestDate, weekStartDay);
 
     // Guard against unreasonable historical spans (DoS prevention)
-    if (startMon.daysTo(endMon) > 366 * 150) {
+    if (startW.daysTo(endW) > 366 * 150) {
         return StreakStats{currentStreak, currentStreak};
     }
 
     int longestStreak = 0;
     int currentRun = 0;
 
-    for (QDate m = startMon; m <= endMon; m = m.addDays(7)) {
+    for (QDate m = startW; m <= endW; m = m.addDays(7)) {
         if (completionsInWeek(m, completions) >= targetCount) {
             currentRun++;
             longestStreak = std::max(longestStreak, currentRun);
@@ -147,12 +158,13 @@ StreakStats StreakCalculator::calculate(
     FrequencyType type,
     int targetCount,
     const QSet<QDate> &completions,
-    const QDate &today)
+    const QDate &today,
+    Qt::DayOfWeek weekStartDay)
 {
     if (type == FrequencyType::Daily) {
         return calculateDaily(completions, today);
     }
-    return calculateWeekly(targetCount, completions, today);
+    return calculateWeekly(targetCount, completions, today, weekStartDay);
 }
 
 } // namespace PlasmaHabit

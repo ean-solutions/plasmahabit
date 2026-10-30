@@ -18,6 +18,8 @@ private Q_SLOTS:
     void testWeeklyStreakFridayBoundary();
     void testWeeklyStreakResetsImmediatelyWhenUnreachable();
     void testWeeklyStreakResetsWhenPriorWeekMissed();
+    void testWeeklyStreakSundayStartBasic();
+    void testWeeklyStreakSundayStartEdgeCases();
 };
 
 void TestStreakCalculator::testDailyStreakConsecutiveEndingToday()
@@ -195,6 +197,57 @@ void TestStreakCalculator::testWeeklyStreakResetsWhenPriorWeekMissed()
     auto stats = StreakCalculator::calculate(FrequencyType::Weekly, 3, completions, today);
     QCOMPARE(stats.currentStreak, 1); // Only current week counts, prior chain broken
     QCOMPARE(stats.longestStreak, 1);
+}
+
+void TestStreakCalculator::testWeeklyStreakSundayStartBasic()
+{
+    // Sunday 2026-10-25 to Saturday 2026-10-31 is one week when week starts on Sunday.
+    // Sunday 2026-10-18 to Saturday 2026-10-24 is the previous week.
+    // Let's test with today = Wednesday 2026-10-28.
+    const QDate today(2026, 10, 28); // Wednesday
+    const QDate prevSun(2026, 10, 18);
+    const QDate curSun(2026, 10, 25);
+
+    // Target = 2 / week.
+    // Previous week completed: Sun 18, Tue 20 -> 2 completions (OK).
+    // Current week completed: Sun 25, today Wed 28 -> 2 completions (Met target!).
+    QSet<QDate> completions = {
+        prevSun, prevSun.addDays(2),
+        curSun, today
+    };
+
+    auto stats = StreakCalculator::calculate(FrequencyType::Weekly, 2, completions, today, Qt::Sunday);
+    QCOMPARE(stats.currentStreak, 2);
+    QCOMPARE(stats.longestStreak, 2);
+}
+
+void TestStreakCalculator::testWeeklyStreakSundayStartEdgeCases()
+{
+    // Edge case 1: A completion on Sunday 2026-10-25
+    // Under Qt::Monday start, Sun 2026-10-25 belongs to the week starting Mon 2026-10-19.
+    // Under Qt::Sunday start, Sun 2026-10-25 belongs to the week starting Sun 2026-10-25!
+    const QDate sunDate(2026, 10, 25);
+    QSet<QDate> completions = { sunDate };
+
+    // With today = Sunday 2026-10-25 and Target = 1:
+    // With Qt::Sunday start, current week starts today and is completed! Streak = 1.
+    auto statsSun = StreakCalculator::calculate(FrequencyType::Weekly, 1, completions, sunDate, Qt::Sunday);
+    QCOMPARE(statsSun.currentStreak, 1);
+
+    // Edge case 2: Today not done yet on Sunday (start of week)
+    // Target = 2. No completions this week yet.
+    // 0 done, 7 days possible (Sun..Sat). 0 + 7 >= 2 -> week still reachable, prior streak preserved.
+    const QDate prevSun(2026, 10, 18);
+    QSet<QDate> prevCompletions = { prevSun, prevSun.addDays(1) }; // 2 completions in prev week
+    auto statsSundayEmpty = StreakCalculator::calculate(FrequencyType::Weekly, 2, prevCompletions, sunDate, Qt::Sunday);
+    QCOMPARE(statsSundayEmpty.currentStreak, 1);
+
+    // Edge case 3: Missed day leading to impossibility on Saturday (last day of Sunday week)
+    // Saturday 2026-10-31. Target = 2. Completions this week = 0.
+    // Saturday is remaining day (1 day possible: Sat). 0 + 1 = 1 < 2 -> Impossible, resets to 0!
+    const QDate satDate(2026, 10, 31);
+    auto statsSatImpossible = StreakCalculator::calculate(FrequencyType::Weekly, 2, prevCompletions, satDate, Qt::Sunday);
+    QCOMPARE(statsSatImpossible.currentStreak, 0);
 }
 
 QTEST_MAIN(TestStreakCalculator)

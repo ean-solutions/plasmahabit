@@ -21,7 +21,8 @@ public:
         FrequencyType type,
         int targetCount,
         const QSet<QDate> &completions,
-        const QDate &today = QDate::currentDate());
+        const QDate &today = QDate::currentDate(),
+        Qt::DayOfWeek weekStartDay = Qt::Monday);
 };
 
 } // namespace PlasmaHabit
