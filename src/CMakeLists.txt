@@ -1,5 +1,6 @@
 add_library(plasmahabit_core STATIC
     domain/StreakCalculator.cpp
+    domain/HabitValidation.cpp
     db/DatabaseManager.cpp
     models/HabitModel.cpp
 )
@@ -22,6 +23,7 @@ target_link_libraries(plasmahabit PRIVATE
     plasmahabit_core
     Qt6::Core
     Qt6::Gui
+    Qt6::Widgets
     Qt6::Qml
     Qt6::QuickControls2
     KF6::CoreAddons

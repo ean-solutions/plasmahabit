@@ -1,7 +1,6 @@
 import QtQuick
 import QtQuick.Controls as QQC2
 import QtQuick.Layouts
-import QtQuick.Dialogs
 import org.kde.kirigami as Kirigami
 
 Kirigami.ApplicationWindow {
@@ -44,7 +43,6 @@ Kirigami.ApplicationWindow {
                 visible: habitModel.lastError.length > 0
                 type: Kirigami.MessageType.Error
                 text: habitModel.lastError
-                showCloseButton: true
             }
 
             // Global Combined Heatmap Card
@@ -138,11 +136,36 @@ Kirigami.ApplicationWindow {
                             font.pointSize: Kirigami.Theme.smallFont.pointSize
                             opacity: 0.7
                         }
-                        Rectangle { width: 10; height: 10; radius: 2; color: Qt.rgba(Kirigami.Theme.textColor.r, Kirigami.Theme.textColor.g, Kirigami.Theme.textColor.b, 0.08) }
-                        Rectangle { width: 10; height: 10; radius: 2; color: "#27ae60" }
-                        Rectangle { width: 10; height: 10; radius: 2; color: "#2ecc71" }
-                        Rectangle { width: 10; height: 10; radius: 2; color: "#1abc9c" }
-                        Rectangle { width: 10; height: 10; radius: 2; color: "#16a085" }
+                        Rectangle {
+                            Layout.preferredWidth: 10
+                            Layout.preferredHeight: 10
+                            radius: 2
+                            color: Qt.rgba(Kirigami.Theme.textColor.r, Kirigami.Theme.textColor.g, Kirigami.Theme.textColor.b, 0.08)
+                        }
+                        Rectangle {
+                            Layout.preferredWidth: 10
+                            Layout.preferredHeight: 10
+                            radius: 2
+                            color: "#27ae60"
+                        }
+                        Rectangle {
+                            Layout.preferredWidth: 10
+                            Layout.preferredHeight: 10
+                            radius: 2
+                            color: "#2ecc71"
+                        }
+                        Rectangle {
+                            Layout.preferredWidth: 10
+                            Layout.preferredHeight: 10
+                            radius: 2
+                            color: "#1abc9c"
+                        }
+                        Rectangle {
+                            Layout.preferredWidth: 10
+                            Layout.preferredHeight: 10
+                            radius: 2
+                            color: "#16a085"
+                        }
                         QQC2.Label {
                             text: i18n("More")
                             font.pointSize: Kirigami.Theme.smallFont.pointSize
@@ -195,8 +218,8 @@ Kirigami.ApplicationWindow {
                         spacing: Kirigami.Units.smallSpacing
 
                         Rectangle {
-                            width: 14
-                            height: 14
+                            Layout.preferredWidth: 14
+                            Layout.preferredHeight: 14
                             radius: 7
                             color: habitCard.colorHex
                         }
@@ -204,6 +227,11 @@ Kirigami.ApplicationWindow {
                         Kirigami.Heading {
                             level: 3
                             text: habitCard.name
+                            textFormat: Text.PlainText
+                            elide: Text.ElideRight
+                            maximumLineCount: 1
+                            Layout.fillWidth: true
+                            Layout.maximumWidth: Kirigami.Units.gridUnit * 20
                         }
 
                         // Frequency badge
@@ -249,8 +277,7 @@ Kirigami.ApplicationWindow {
                             icon.name: habitCard.completedToday ? "dialog-ok" : "checkbox"
                             highlighted: habitCard.completedToday
                             onClicked: {
-                                var todayIso = new Date().toISOString().substring(0, 10)
-                                habitModel.toggleCompletion(habitCard.id, todayIso)
+                                habitModel.toggleToday(habitCard.id)
                             }
                         }
 
@@ -264,14 +291,16 @@ Kirigami.ApplicationWindow {
                             }
                         }
 
-                        // Delete button
+                        // Delete button with confirmation dialog
                         QQC2.ToolButton {
                             visible: habitCard.isArchived
                             icon.name: "edit-delete"
                             QQC2.ToolTip.visible: hovered
                             QQC2.ToolTip.text: i18n("Delete Permanently")
                             onClicked: {
-                                habitModel.removeHabit(habitCard.id)
+                                deleteConfirmDialog.targetId = habitCard.id
+                                deleteConfirmDialog.targetName = habitCard.name
+                                deleteConfirmDialog.open()
                             }
                         }
                     }
@@ -358,6 +387,34 @@ Kirigami.ApplicationWindow {
         }
     }
 
+    // Confirmation dialog for permanent deletion
+    Kirigami.PromptDialog {
+        id: deleteConfirmDialog
+        title: i18n("Delete Habit Permanently")
+        standardButtons: Kirigami.Dialog.Ok | Kirigami.Dialog.Cancel
+        preferredWidth: Kirigami.Units.gridUnit * 20
+
+        property int targetId: -1
+        property string targetName: ""
+
+        mainItem: ColumnLayout {
+            QQC2.Label {
+                Layout.fillWidth: true
+                textFormat: Text.PlainText
+                wrapMode: Text.WordWrap
+                text: i18n("Are you sure you want to permanently delete \"%1\" and all of its historical completion data? This action cannot be undone.", deleteConfirmDialog.targetName)
+            }
+        }
+
+        onAccepted: {
+            if (targetId > 0) {
+                habitModel.removeHabit(targetId)
+                targetId = -1
+                targetName = ""
+            }
+        }
+    }
+
     // Create Habit Dialog
     Kirigami.Dialog {
         id: createHabitDialog
@@ -367,7 +424,17 @@ Kirigami.ApplicationWindow {
 
         property string selectedColor: "#2ecc71"
 
+        Component.onCompleted: {
+            var okBtn = standardButton(Kirigami.Dialog.Ok)
+            if (okBtn) {
+                okBtn.enabled = Qt.binding(function() { return nameField.text.trim().length > 0; })
+            }
+        }
+
         onAccepted: {
+            if (nameField.text.trim().length === 0) {
+                return
+            }
             var freq = freqCombo.currentIndex === 0 ? "daily" : "weekly"
             var target = freq === "daily" ? 1 : targetSpin.value
             habitModel.addHabit(nameField.text, freq, target, selectedColor)
@@ -384,6 +451,7 @@ Kirigami.ApplicationWindow {
                     id: nameField
                     Kirigami.FormData.label: i18n("Name:")
                     placeholderText: i18n("e.g. Morning Jog, Read 20 mins")
+                    maximumLength: 120
                     Layout.fillWidth: true
                 }
 

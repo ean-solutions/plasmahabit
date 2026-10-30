@@ -7,13 +7,14 @@
 #include <QSqlDatabase>
 #include <QString>
 #include <optional>
+#include "domain/StreakCalculator.h"
 
 namespace PlasmaHabit {
 
 struct HabitRecord {
     int id = -1;
     QString name;
-    QString frequencyType; // "daily" or "weekly"
+    FrequencyType frequencyType = FrequencyType::Daily;
     int targetCount = 1;
     QString colorHex = QStringLiteral("#2ecc71");
     bool isArchived = false;
@@ -42,11 +43,15 @@ public:
     [[nodiscard]] QSet<QDate> fetchCompletions(int habitId) const;
     [[nodiscard]] bool isCompletedOn(int habitId, const QDate &date) const;
 
+    [[nodiscard]] int rejectedRowCount() const;
+    void resetRejectedRowCount();
+
     [[nodiscard]] QString lastError() const;
 
 private:
     QString m_connectionName;
     QString m_lastError;
+    mutable int m_rejectedRows = 0;
 };
 
 } // namespace PlasmaHabit

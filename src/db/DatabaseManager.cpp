@@ -1,13 +1,75 @@
 #include "db/DatabaseManager.h"
+#include "domain/HabitValidation.h"
 
 #include <QDir>
+#include <QFile>
 #include <QFileInfo>
 #include <QSqlQuery>
 #include <QSqlError>
 #include <QStandardPaths>
 #include <QUuid>
+#include <limits>
 
 namespace PlasmaHabit {
+
+namespace {
+
+void enforceFilePermissions(const QString &filePath)
+{
+    if (QFile::exists(filePath)) {
+        QFile::setPermissions(filePath, QFileDevice::ReadOwner | QFileDevice::WriteOwner);
+    }
+}
+
+std::optional<HabitRecord> parseHabitRow(const QSqlQuery &query, int &rejectedRowsCounter)
+{
+    bool idOk = false;
+    const qlonglong idVal = query.value(0).toLongLong(&idOk);
+    if (!idOk || idVal <= 0 || idVal > std::numeric_limits<int>::max()) {
+        rejectedRowsCounter++;
+        return std::nullopt;
+    }
+
+    const auto nameOpt = Validation::sanitizeName(query.value(1).toString());
+    if (!nameOpt) {
+        rejectedRowsCounter++;
+        return std::nullopt;
+    }
+
+    const auto freqOpt = Validation::parseFrequency(query.value(2).toString());
+    if (!freqOpt) {
+        rejectedRowsCounter++;
+        return std::nullopt;
+    }
+
+    bool targetOk = false;
+    const int targetVal = query.value(3).toInt(&targetOk);
+    if (!targetOk || !Validation::isValidTarget(*freqOpt, targetVal)) {
+        rejectedRowsCounter++;
+        return std::nullopt;
+    }
+
+    const QString colorVal = Validation::sanitizeColor(query.value(4).toString());
+
+    bool archivedOk = false;
+    const int archivedVal = query.value(5).toInt(&archivedOk);
+    if (!archivedOk || (archivedVal != 0 && archivedVal != 1)) {
+        rejectedRowsCounter++;
+        return std::nullopt;
+    }
+
+    HabitRecord rec;
+    rec.id = static_cast<int>(idVal);
+    rec.name = *nameOpt;
+    rec.frequencyType = *freqOpt;
+    rec.targetCount = targetVal;
+    rec.colorHex = colorVal;
+    rec.isArchived = (archivedVal == 1);
+    rec.createdAt = query.value(6).toString();
+    return rec;
+}
+
+} // namespace
 
 DatabaseManager::DatabaseManager(QObject *parent)
     : QObject(parent)
@@ -31,9 +93,12 @@ DatabaseManager::~DatabaseManager()
 bool DatabaseManager::initialize(const QString &customDbPath)
 {
     QString dbPath = customDbPath;
-    if (dbPath.isEmpty()) {
+    const bool isDefaultLocation = dbPath.isEmpty();
+
+    if (isDefaultLocation) {
         const QString baseDir = QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation);
         QDir().mkpath(baseDir);
+        QFile::setPermissions(baseDir, QFileDevice::ReadOwner | QFileDevice::WriteOwner | QFileDevice::ExeOwner);
         dbPath = QDir(baseDir).filePath(QStringLiteral("plasmahabit.sqlite3"));
     } else {
         QFileInfo fi(dbPath);
@@ -48,10 +113,46 @@ bool DatabaseManager::initialize(const QString &customDbPath)
         return false;
     }
 
-    // Enable WAL mode and foreign keys
+    if (isDefaultLocation) {
+        enforceFilePermissions(dbPath);
+        enforceFilePermissions(dbPath + QStringLiteral("-wal"));
+        enforceFilePermissions(dbPath + QStringLiteral("-shm"));
+    }
+
+    // Enable WAL mode and foreign keys with strict verification
     QSqlQuery pragmaQuery(db);
-    pragmaQuery.exec(QStringLiteral("PRAGMA journal_mode = WAL;"));
-    pragmaQuery.exec(QStringLiteral("PRAGMA foreign_keys = ON;"));
+    if (!pragmaQuery.exec(QStringLiteral("PRAGMA journal_mode = WAL;"))) {
+        m_lastError = pragmaQuery.lastError().text();
+        return false;
+    }
+    if (!pragmaQuery.exec(QStringLiteral("PRAGMA foreign_keys = ON;"))) {
+        m_lastError = pragmaQuery.lastError().text();
+        return false;
+    }
+
+    // Integrity checks on database
+    if (pragmaQuery.exec(QStringLiteral("PRAGMA quick_check;"))) {
+        if (pragmaQuery.next()) {
+            const QString checkResult = pragmaQuery.value(0).toString();
+            if (checkResult != QStringLiteral("ok")) {
+                m_lastError = QStringLiteral("Database corruption detected: ") + checkResult;
+                return false;
+            }
+        }
+    } else {
+        m_lastError = pragmaQuery.lastError().text();
+        return false;
+    }
+
+    if (pragmaQuery.exec(QStringLiteral("PRAGMA foreign_key_check;"))) {
+        if (pragmaQuery.next()) {
+            m_lastError = QStringLiteral("Foreign key integrity check failed.");
+            return false;
+        }
+    } else {
+        m_lastError = pragmaQuery.lastError().text();
+        return false;
+    }
 
     // Create tables and indexes
     const QString habitsTableSql = QStringLiteral(
@@ -111,10 +212,31 @@ std::optional<int> DatabaseManager::createHabit(
     int targetCount,
     const QString &colorHex)
 {
+    m_lastError.clear();
+
     if (!isOpen()) {
         m_lastError = QStringLiteral("Database not open");
         return std::nullopt;
     }
+
+    const auto sanitizedName = Validation::sanitizeName(name);
+    if (!sanitizedName) {
+        m_lastError = QStringLiteral("Invalid habit name");
+        return std::nullopt;
+    }
+
+    const auto parsedFreq = Validation::parseFrequency(frequencyType);
+    if (!parsedFreq) {
+        m_lastError = QStringLiteral("Invalid frequency type");
+        return std::nullopt;
+    }
+
+    if (!Validation::isValidTarget(*parsedFreq, targetCount)) {
+        m_lastError = QStringLiteral("Invalid target count");
+        return std::nullopt;
+    }
+
+    const QString sanitizedColor = Validation::sanitizeColor(colorHex);
 
     auto db = QSqlDatabase::database(m_connectionName);
     QSqlQuery query(db);
@@ -122,21 +244,30 @@ std::optional<int> DatabaseManager::createHabit(
         "INSERT INTO habits (name, frequency_type, target_count, color_hex) "
         "VALUES (:name, :type, :target, :color);"
     ));
-    query.bindValue(QStringLiteral(":name"), name.trimmed());
-    query.bindValue(QStringLiteral(":type"), frequencyType);
+    query.bindValue(QStringLiteral(":name"), *sanitizedName);
+    query.bindValue(QStringLiteral(":type"), Validation::frequencyToString(*parsedFreq));
     query.bindValue(QStringLiteral(":target"), targetCount);
-    query.bindValue(QStringLiteral(":color"), colorHex);
+    query.bindValue(QStringLiteral(":color"), sanitizedColor);
 
     if (!query.exec()) {
         m_lastError = query.lastError().text();
         return std::nullopt;
     }
 
-    return query.lastInsertId().toInt();
+    bool idOk = false;
+    const qlonglong lastId = query.lastInsertId().toLongLong(&idOk);
+    if (!idOk || lastId <= 0 || lastId > std::numeric_limits<int>::max()) {
+        m_lastError = QStringLiteral("Invalid generated row id");
+        return std::nullopt;
+    }
+
+    return static_cast<int>(lastId);
 }
 
 bool DatabaseManager::updateHabitArchived(int habitId, bool archived)
 {
+    m_lastError.clear();
+
     if (!isOpen()) {
         m_lastError = QStringLiteral("Database not open");
         return false;
@@ -153,11 +284,18 @@ bool DatabaseManager::updateHabitArchived(int habitId, bool archived)
         return false;
     }
 
-    return query.numRowsAffected() > 0;
+    if (query.numRowsAffected() == 0) {
+        m_lastError = QStringLiteral("Habit not found");
+        return false;
+    }
+
+    return true;
 }
 
 bool DatabaseManager::deleteHabit(int habitId)
 {
+    m_lastError.clear();
+
     if (!isOpen()) {
         m_lastError = QStringLiteral("Database not open");
         return false;
@@ -173,7 +311,12 @@ bool DatabaseManager::deleteHabit(int habitId)
         return false;
     }
 
-    return query.numRowsAffected() > 0;
+    if (query.numRowsAffected() == 0) {
+        m_lastError = QStringLiteral("Habit not found");
+        return false;
+    }
+
+    return true;
 }
 
 QList<HabitRecord> DatabaseManager::fetchHabits(bool includeArchived) const
@@ -197,15 +340,10 @@ QList<HabitRecord> DatabaseManager::fetchHabits(bool includeArchived) const
     }
 
     while (query.next()) {
-        HabitRecord rec;
-        rec.id = query.value(0).toInt();
-        rec.name = query.value(1).toString();
-        rec.frequencyType = query.value(2).toString();
-        rec.targetCount = query.value(3).toInt();
-        rec.colorHex = query.value(4).toString();
-        rec.isArchived = query.value(5).toInt() == 1;
-        rec.createdAt = query.value(6).toString();
-        result.append(rec);
+        auto recOpt = parseHabitRow(query, m_rejectedRows);
+        if (recOpt) {
+            result.append(*recOpt);
+        }
     }
 
     return result;
@@ -226,19 +364,13 @@ std::optional<HabitRecord> DatabaseManager::fetchHabitById(int habitId) const
         return std::nullopt;
     }
 
-    HabitRecord rec;
-    rec.id = query.value(0).toInt();
-    rec.name = query.value(1).toString();
-    rec.frequencyType = query.value(2).toString();
-    rec.targetCount = query.value(3).toInt();
-    rec.colorHex = query.value(4).toString();
-    rec.isArchived = query.value(5).toInt() == 1;
-    rec.createdAt = query.value(6).toString();
-    return rec;
+    return parseHabitRow(query, m_rejectedRows);
 }
 
 bool DatabaseManager::toggleCompletion(int habitId, const QDate &date, const QDate &today)
 {
+    m_lastError.clear();
+
     if (!isOpen()) {
         m_lastError = QStringLiteral("Database not open");
         return false;
@@ -249,32 +381,52 @@ bool DatabaseManager::toggleCompletion(int habitId, const QDate &date, const QDa
         return false;
     }
 
+    if (date.year() < 2000) {
+        m_lastError = QStringLiteral("Invalid date range");
+        return false;
+    }
+
     const QString isoDate = date.toString(Qt::ISODate);
     auto db = QSqlDatabase::database(m_connectionName);
 
-    if (isCompletedOn(habitId, date)) {
-        // Delete completion
-        QSqlQuery deleteQuery(db);
-        deleteQuery.prepare(QStringLiteral("DELETE FROM habit_completions WHERE habit_id = :id AND completed_date = :date;"));
-        deleteQuery.bindValue(QStringLiteral(":id"), habitId);
-        deleteQuery.bindValue(QStringLiteral(":date"), isoDate);
-        if (!deleteQuery.exec()) {
-            m_lastError = deleteQuery.lastError().text();
-            return false;
-        }
-        return true;
-    } else {
-        // Insert completion
+    if (!db.transaction()) {
+        m_lastError = db.lastError().text();
+        return false;
+    }
+
+    // Attempt to delete existing completion
+    QSqlQuery deleteQuery(db);
+    deleteQuery.prepare(QStringLiteral("DELETE FROM habit_completions WHERE habit_id = :id AND completed_date = :date;"));
+    deleteQuery.bindValue(QStringLiteral(":id"), habitId);
+    deleteQuery.bindValue(QStringLiteral(":date"), isoDate);
+
+    if (!deleteQuery.exec()) {
+        m_lastError = deleteQuery.lastError().text();
+        db.rollback();
+        return false;
+    }
+
+    if (deleteQuery.numRowsAffected() == 0) {
+        // Was not present, insert it
         QSqlQuery insertQuery(db);
         insertQuery.prepare(QStringLiteral("INSERT INTO habit_completions (habit_id, completed_date) VALUES (:id, :date);"));
         insertQuery.bindValue(QStringLiteral(":id"), habitId);
         insertQuery.bindValue(QStringLiteral(":date"), isoDate);
+
         if (!insertQuery.exec()) {
             m_lastError = insertQuery.lastError().text();
+            db.rollback();
             return false;
         }
-        return true;
     }
+
+    if (!db.commit()) {
+        m_lastError = db.lastError().text();
+        db.rollback();
+        return false;
+    }
+
+    return true;
 }
 
 QSet<QDate> DatabaseManager::fetchCompletions(int habitId) const
@@ -293,11 +445,14 @@ QSet<QDate> DatabaseManager::fetchCompletions(int habitId) const
         return result;
     }
 
+    const QDate today = QDate::currentDate();
     while (query.next()) {
         const QString str = query.value(0).toString();
-        const QDate d = QDate::fromString(str, Qt::ISODate);
-        if (d.isValid()) {
-            result.insert(d);
+        const auto dOpt = Validation::parseCanonicalDate(str, today);
+        if (dOpt.has_value()) {
+            result.insert(*dOpt);
+        } else {
+            m_rejectedRows++;
         }
     }
 
@@ -322,6 +477,16 @@ bool DatabaseManager::isCompletedOn(int habitId, const QDate &date) const
     }
 
     return query.next();
+}
+
+int DatabaseManager::rejectedRowCount() const
+{
+    return m_rejectedRows;
+}
+
+void DatabaseManager::resetRejectedRowCount()
+{
+    m_rejectedRows = 0;
 }
 
 QString DatabaseManager::lastError() const

@@ -15,6 +15,7 @@ private Q_SLOTS:
     void testArchiveHabitDoesNotDeleteCompletions();
     void testToggleCompletionIdempotent();
     void testToggleCompletionRejectsFutureDates();
+    void testUpdateAndDeleteNonExistentHabitReturnsFalse();
 };
 
 void TestDatabaseManager::testInitializeCreatesSchema()
@@ -45,9 +46,10 @@ void TestDatabaseManager::testCreateHabitAndFetch()
     auto habits = db.fetchHabits(false);
     QCOMPARE(habits.size(), 2);
     QCOMPARE(habits[0].name, QStringLiteral("Morning Run"));
-    QCOMPARE(habits[0].frequencyType, QStringLiteral("daily"));
+    QCOMPARE(habits[0].frequencyType, FrequencyType::Daily);
     QCOMPARE(habits[1].name, QStringLiteral("Gym Session"));
     QCOMPARE(habits[1].targetCount, 3);
+    QCOMPARE(habits[1].frequencyType, FrequencyType::Weekly);
 }
 
 void TestDatabaseManager::testArchiveHabitDoesNotDeleteCompletions()
@@ -125,6 +127,21 @@ void TestDatabaseManager::testToggleCompletionRejectsFutureDates()
     // Attempting to complete tomorrow must be rejected
     QVERIFY(!db.toggleCompletion(*id, tomorrow, today));
     QVERIFY(!db.isCompletedOn(*id, tomorrow));
+}
+
+void TestDatabaseManager::testUpdateAndDeleteNonExistentHabitReturnsFalse()
+{
+    QTemporaryDir tempDir;
+    const QString dbPath = tempDir.filePath(QStringLiteral("test_plasmahabit.sqlite3"));
+
+    DatabaseManager db;
+    QVERIFY(db.initialize(dbPath));
+
+    QVERIFY(!db.updateHabitArchived(424242, true));
+    QCOMPARE(db.lastError(), QStringLiteral("Habit not found"));
+
+    QVERIFY(!db.deleteHabit(424242));
+    QCOMPARE(db.lastError(), QStringLiteral("Habit not found"));
 }
 
 QTEST_MAIN(TestDatabaseManager)

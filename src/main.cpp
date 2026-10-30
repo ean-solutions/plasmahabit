@@ -1,4 +1,4 @@
-#include <QGuiApplication>
+#include <QApplication>
 #include <QQmlApplicationEngine>
 #include <QQmlContext>
 #include <QQuickStyle>
@@ -10,7 +10,7 @@
 
 int main(int argc, char *argv[])
 {
-    QGuiApplication app(argc, argv);
+    QApplication app(argc, argv);
     KLocalizedString::setApplicationDomain("plasmahabit");
 
     app.setOrganizationName(QStringLiteral("eansolutions"));
@@ -23,11 +23,16 @@ int main(int argc, char *argv[])
     }
 
     auto dbManager = new PlasmaHabit::DatabaseManager(&app);
+    QString dbInitError;
     if (!dbManager->initialize()) {
-        qWarning() << "Failed to initialize SQLite database:" << dbManager->lastError();
+        dbInitError = dbManager->lastError();
+        qWarning() << "Failed to initialize SQLite database:" << dbInitError;
     }
 
     auto habitModel = new PlasmaHabit::HabitModel(dbManager, &app);
+    if (!dbInitError.isEmpty()) {
+        habitModel->setStartupError(dbInitError);
+    }
 
     QQmlApplicationEngine engine;
     auto *localizedContext = KLocalization::setupLocalizedContext(&engine);

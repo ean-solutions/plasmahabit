@@ -15,6 +15,7 @@ private Q_SLOTS:
     void testDailyStreakRetroactivePastDayFill();
     void testWeeklyStreakCountsConsecutiveWeeks();
     void testWeeklyStreakAliveMidWeekWhenReachable();
+    void testWeeklyStreakFridayBoundary();
     void testWeeklyStreakResetsImmediatelyWhenUnreachable();
     void testWeeklyStreakResetsWhenPriorWeekMissed();
 };
@@ -131,6 +132,25 @@ void TestStreakCalculator::testWeeklyStreakAliveMidWeekWhenReachable()
 
     auto stats = StreakCalculator::calculate(FrequencyType::Weekly, 3, completions, today);
     // Prior streak of 1 week remains alive
+    QCOMPARE(stats.currentStreak, 1);
+    QCOMPARE(stats.longestStreak, 1);
+}
+
+void TestStreakCalculator::testWeeklyStreakFridayBoundary()
+{
+    // Friday 2026-10-30 (day 5 of week). Target: 3.
+    // Completions this week: 0 (today not completed).
+    // Remaining days: Fri(5), Sat(6), Sun(7) = 3 days.
+    // 0 + 3 == 3 >= 3 -> Still reachable! Prior streak remains alive.
+    const QDate friday(2026, 10, 30);
+    const QDate currentMon(2026, 10, 26);
+    const QDate prevMon = currentMon.addDays(-7);
+
+    QSet<QDate> completions = {
+        prevMon, prevMon.addDays(1), prevMon.addDays(2)
+    };
+
+    auto stats = StreakCalculator::calculate(FrequencyType::Weekly, 3, completions, friday);
     QCOMPARE(stats.currentStreak, 1);
     QCOMPARE(stats.longestStreak, 1);
 }

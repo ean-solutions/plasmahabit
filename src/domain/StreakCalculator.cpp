@@ -40,7 +40,7 @@ StreakStats calculateDaily(const QSet<QDate> &completions, const QDate &today)
     for (size_t i = 0; i < sortedDates.size(); ++i) {
         if (i == 0 || sortedDates[i] == sortedDates[i - 1].addDays(1)) {
             run++;
-        } else if (sortedDates[i] > sortedDates[i - 1].addDays(1)) {
+        } else {
             run = 1;
         }
         longestStreak = std::max(longestStreak, run);
@@ -56,11 +56,15 @@ QDate mondayOfWeek(const QDate &date)
     return date.addDays(-(date.dayOfWeek() - 1));
 }
 
-int completionsInWeek(const QDate &monday, const QSet<QDate> &completions)
+int completionsInWeek(const QDate &monday, const QSet<QDate> &completions, const QDate &limitDate = QDate())
 {
     int count = 0;
     for (int d = 0; d < 7; ++d) {
-        if (completions.contains(monday.addDays(d))) {
+        const QDate day = monday.addDays(d);
+        if (limitDate.isValid() && day > limitDate) {
+            continue;
+        }
+        if (completions.contains(day)) {
             count++;
         }
     }
@@ -75,8 +79,8 @@ StreakStats calculateWeekly(int targetCount, const QSet<QDate> &completions, con
 
     const QDate currentMon = mondayOfWeek(today);
 
-    // Current week analysis
-    int c_cur = completionsInWeek(currentMon, completions);
+    // Current week analysis (count only completions up to today)
+    int c_cur = completionsInWeek(currentMon, completions, today);
     int r_cur = 0;
     if (completions.contains(today)) {
         r_cur = 7 - today.dayOfWeek();
@@ -84,23 +88,20 @@ StreakStats calculateWeekly(int targetCount, const QSet<QDate> &completions, con
         r_cur = 7 - today.dayOfWeek() + 1;
     }
 
+    int priorChain = 0;
+    QDate wMon = currentMon.addDays(-7);
+    while (completionsInWeek(wMon, completions) >= targetCount) {
+        priorChain++;
+        wMon = wMon.addDays(-7);
+    }
+
     int currentStreak = 0;
     if (c_cur >= targetCount) {
         // Current week met target -> counts as 1 + chain of consecutive prior weeks
-        currentStreak = 1;
-        QDate wMon = currentMon.addDays(-7);
-        while (completionsInWeek(wMon, completions) >= targetCount) {
-            currentStreak++;
-            wMon = wMon.addDays(-7);
-        }
+        currentStreak = 1 + priorChain;
     } else if (c_cur + r_cur >= targetCount) {
         // Still reachable! Prior streak is kept alive
-        currentStreak = 0;
-        QDate wMon = currentMon.addDays(-7);
-        while (completionsInWeek(wMon, completions) >= targetCount) {
-            currentStreak++;
-            wMon = wMon.addDays(-7);
-        }
+        currentStreak = priorChain;
     } else {
         // Unreachable! Reset strictly to 0 immediately
         currentStreak = 0;
@@ -117,6 +118,11 @@ StreakStats calculateWeekly(int targetCount, const QSet<QDate> &completions, con
 
     QDate startMon = mondayOfWeek(earliestDate);
     QDate endMon = mondayOfWeek(latestDate);
+
+    // Guard against unreasonable historical spans (DoS prevention)
+    if (startMon.daysTo(endMon) > 366 * 150) {
+        return StreakStats{currentStreak, currentStreak};
+    }
 
     int longestStreak = 0;
     int currentRun = 0;
