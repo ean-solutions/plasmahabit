@@ -25,11 +25,11 @@ See [`tasks/plan.md`](file:///home/Eze/projects/plasmahabit/tasks/plan.md) for a
   - **Dependencies:** Tasks 1–7
   - **Files:** `src/domain/StreakCalculator.h`, `src/domain/StreakCalculator.cpp`, `tests/tst_streakcalculator.cpp` (Small: 3 files)
 
-- [ ] **Task 9: Add `app_settings` Table and `weekStartDay` Persistence to `DatabaseManager`**
+- [x] **Task 9: Add `app_settings` Table and `weekStartDay` Persistence to `DatabaseManager`**
   - **Acceptance:**
-    - [ ] `DatabaseManager::initialize` creates the `app_settings` table automatically on new and existing SQLite databases.
-    - [ ] `DatabaseManager::weekStartDay()` returns `Qt::Monday` by default when no setting is stored or if an invalid value exists in the table.
-    - [ ] `DatabaseManager::setWeekStartDay(Qt::Sunday)` and `setWeekStartDay(Qt::Monday)` persist across database close/reopen and reject unsupported `Qt::DayOfWeek` values safely.
+    - [x] `DatabaseManager::initialize` creates the `app_settings` table automatically on new and existing SQLite databases.
+    - [x] `DatabaseManager::weekStartDay()` returns `Qt::Monday` by default when no setting is stored or if an invalid value exists in the table.
+    - [x] `DatabaseManager::setWeekStartDay(Qt::Sunday)` and `setWeekStartDay(Qt::Monday)` persist across database close/reopen and reject unsupported `Qt::DayOfWeek` values safely.
   - **Verify:** `cmake --build build --parallel && ctest --test-dir build -R tst_databasemanager --output-on-failure`
   - **Dependencies:** Tasks 1–7
   - **Files:** `src/db/DatabaseManager.h`, `src/db/DatabaseManager.cpp`, `tests/tst_databasemanager.cpp` (Small: 3 files)

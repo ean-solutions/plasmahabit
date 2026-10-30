@@ -187,10 +187,18 @@ bool DatabaseManager::initialize(const QString &customDbPath)
         "CREATE INDEX IF NOT EXISTS idx_habits_archived ON habits(is_archived);"
     );
 
+    const QString appSettingsTableSql = QStringLiteral(
+        "CREATE TABLE IF NOT EXISTS app_settings ("
+        "    key    TEXT PRIMARY KEY CHECK (length(trim(key)) > 0),"
+        "    value  TEXT NOT NULL"
+        ");"
+    );
+
     if (!pragmaQuery.exec(habitsTableSql) ||
         !pragmaQuery.exec(completionsTableSql) ||
         !pragmaQuery.exec(idxDateSql) ||
-        !pragmaQuery.exec(idxArchivedSql)) {
+        !pragmaQuery.exec(idxArchivedSql) ||
+        !pragmaQuery.exec(appSettingsTableSql)) {
         m_lastError = pragmaQuery.lastError().text();
         return false;
     }
@@ -487,6 +495,58 @@ int DatabaseManager::rejectedRowCount() const
 void DatabaseManager::resetRejectedRowCount()
 {
     m_rejectedRows = 0;
+}
+
+Qt::DayOfWeek DatabaseManager::weekStartDay() const
+{
+    if (!isOpen()) {
+        return Qt::Monday;
+    }
+
+    auto db = QSqlDatabase::database(m_connectionName);
+    QSqlQuery query(db);
+    query.prepare(QStringLiteral("SELECT value FROM app_settings WHERE key = 'week_start_day' LIMIT 1;"));
+
+    if (query.exec() && query.next()) {
+        const QString val = query.value(0).toString().trimmed().toLower();
+        if (val == QStringLiteral("sunday")) {
+            return Qt::Sunday;
+        }
+    }
+
+    return Qt::Monday;
+}
+
+bool DatabaseManager::setWeekStartDay(Qt::DayOfWeek day)
+{
+    m_lastError.clear();
+
+    if (!isOpen()) {
+        m_lastError = QStringLiteral("Database not open");
+        return false;
+    }
+
+    if (day != Qt::Monday && day != Qt::Sunday) {
+        m_lastError = QStringLiteral("Unsupported week start day");
+        return false;
+    }
+
+    const QString val = (day == Qt::Sunday) ? QStringLiteral("sunday") : QStringLiteral("monday");
+
+    auto db = QSqlDatabase::database(m_connectionName);
+    QSqlQuery query(db);
+    query.prepare(QStringLiteral(
+        "INSERT INTO app_settings (key, value) VALUES ('week_start_day', :val) "
+        "ON CONFLICT(key) DO UPDATE SET value = excluded.value;"
+    ));
+    query.bindValue(QStringLiteral(":val"), val);
+
+    if (!query.exec()) {
+        m_lastError = query.lastError().text();
+        return false;
+    }
+
+    return true;
 }
 
 QString DatabaseManager::lastError() const

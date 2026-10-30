@@ -16,6 +16,7 @@ private Q_SLOTS:
     void testToggleCompletionIdempotent();
     void testToggleCompletionRejectsFutureDates();
     void testUpdateAndDeleteNonExistentHabitReturnsFalse();
+    void testWeekStartDaySettingsPersistence();
 };
 
 void TestDatabaseManager::testInitializeCreatesSchema()
@@ -142,6 +143,35 @@ void TestDatabaseManager::testUpdateAndDeleteNonExistentHabitReturnsFalse()
 
     QVERIFY(!db.deleteHabit(424242));
     QCOMPARE(db.lastError(), QStringLiteral("Habit not found"));
+}
+
+void TestDatabaseManager::testWeekStartDaySettingsPersistence()
+{
+    QTemporaryDir tempDir;
+    const QString dbPath = tempDir.filePath(QStringLiteral("test_plasmahabit_settings.sqlite3"));
+
+    {
+        DatabaseManager db;
+        QVERIFY(db.initialize(dbPath));
+
+        // Default should be Qt::Monday
+        QCOMPARE(db.weekStartDay(), Qt::Monday);
+
+        // Set to Qt::Sunday
+        QVERIFY(db.setWeekStartDay(Qt::Sunday));
+        QCOMPARE(db.weekStartDay(), Qt::Sunday);
+    }
+
+    // Reopen database from same file to test persistence across restarts
+    {
+        DatabaseManager db2;
+        QVERIFY(db2.initialize(dbPath));
+        QCOMPARE(db2.weekStartDay(), Qt::Sunday);
+
+        // Change back to Qt::Monday
+        QVERIFY(db2.setWeekStartDay(Qt::Monday));
+        QCOMPARE(db2.weekStartDay(), Qt::Monday);
+    }
 }
 
 QTEST_MAIN(TestDatabaseManager)

@@ -43,6 +43,10 @@ public:
     [[nodiscard]] QSet<QDate> fetchCompletions(int habitId) const;
     [[nodiscard]] bool isCompletedOn(int habitId, const QDate &date) const;
 
+    // Settings
+    [[nodiscard]] Qt::DayOfWeek weekStartDay() const;
+    bool setWeekStartDay(Qt::DayOfWeek day);
+
     [[nodiscard]] int rejectedRowCount() const;
     void resetRejectedRowCount();
 
