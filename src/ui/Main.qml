@@ -30,6 +30,13 @@ Kirigami.ApplicationWindow {
                 onTriggered: {
                     habitModel.showArchived = checked
                 }
+            },
+            Kirigami.Action {
+                text: i18n("Settings")
+                icon.name: "configure"
+                onTriggered: {
+                    settingsDialog.open()
+                }
             }
         ]
 
@@ -66,58 +73,110 @@ Kirigami.ApplicationWindow {
                 contentItem: ColumnLayout {
                     spacing: Kirigami.Units.smallSpacing
 
-                    // Heatmap grid (52 weeks x 7 days)
+                    // Heatmap grid (52 weeks x 7 days) with Month headers & Day labels
                     QQC2.ScrollView {
                         Layout.fillWidth: true
-                        Layout.preferredHeight: 110
+                        Layout.preferredHeight: 140
                         clip: true
                         QQC2.ScrollBar.vertical.policy: QQC2.ScrollBar.AlwaysOff
 
-                        Item {
-                            width: 52 * 14 + 40
-                            height: 7 * 14 + 10
+                        Row {
+                            spacing: 6
+                            topPadding: 4
+                            leftPadding: 4
 
-                            Row {
+                            // Left day labels (Mon, Wed, Fri)
+                            Column {
+                                topPadding: 18 // align with cells below month labels
                                 spacing: 3
                                 Repeater {
-                                    model: 52
-                                    delegate: Column {
-                                        required property int index
-                                        readonly property int weekIdx: index
-                                        spacing: 3
+                                    model: habitModel.dayLabels
+                                    delegate: Item {
+                                        required property string modelData
+                                        width: 26
+                                        height: 11
+                                        QQC2.Label {
+                                            anchors.fill: parent
+                                            text: parent.modelData
+                                            font.pixelSize: 9
+                                            horizontalAlignment: Text.AlignRight
+                                            verticalAlignment: Text.AlignVCenter
+                                            opacity: 0.65
+                                        }
+                                    }
+                                }
+                            }
 
-                                        Repeater {
-                                            model: 7
-                                            delegate: Rectangle {
-                                                required property int index
-                                                readonly property int dayIdx: index
-                                                readonly property int cellIndex: weekIdx * 7 + dayIdx
-                                                readonly property var cellData: (habitModel.globalHeatmap && cellIndex < habitModel.globalHeatmap.length) ? habitModel.globalHeatmap[cellIndex] : null
+                            // Heatmap columns with top month labels
+                            Column {
+                                spacing: 4
 
-                                                width: 11
-                                                height: 11
-                                                radius: 2
+                                // Top month labels row
+                                Row {
+                                    spacing: 3
+                                    Repeater {
+                                        model: habitModel.monthLabels
+                                        delegate: Item {
+                                            required property string modelData
+                                            width: 11
+                                            height: 14
+                                            clip: false
+                                            QQC2.Label {
+                                                visible: parent.modelData.length > 0
+                                                text: parent.modelData
+                                                font.pixelSize: 9
+                                                font.bold: true
+                                                opacity: 0.75
+                                                anchors.left: parent.left
+                                                anchors.verticalCenter: parent.verticalCenter
+                                            }
+                                        }
+                                    }
+                                }
 
-                                                color: {
-                                                    if (!cellData || cellData.isFuture) return Kirigami.Theme.disabledTextColor
-                                                    var intensity = cellData.intensity || 0
-                                                    if (intensity === 0) return Qt.rgba(Kirigami.Theme.textColor.r, Kirigami.Theme.textColor.g, Kirigami.Theme.textColor.b, 0.08)
-                                                    if (intensity === 1) return "#27ae60"
-                                                    if (intensity === 2) return "#2ecc71"
-                                                    if (intensity === 3) return "#1abc9c"
-                                                    return "#16a085"
-                                                }
+                                // 52 weeks x 7 days cells
+                                Row {
+                                    spacing: 3
+                                    Repeater {
+                                        model: 52
+                                        delegate: Column {
+                                            required property int index
+                                            readonly property int weekIdx: index
+                                            spacing: 3
 
-                                                opacity: (cellData && cellData.isFuture) ? 0.2 : 1.0
+                                            Repeater {
+                                                model: 7
+                                                delegate: Rectangle {
+                                                    required property int index
+                                                    readonly property int dayIdx: index
+                                                    readonly property int cellIndex: weekIdx * 7 + dayIdx
+                                                    readonly property var cellData: (habitModel.globalHeatmap && cellIndex < habitModel.globalHeatmap.length) ? habitModel.globalHeatmap[cellIndex] : null
 
-                                                border.width: (cellData && cellData.isToday) ? 1 : 0
-                                                border.color: Kirigami.Theme.highlightColor
+                                                    width: 11
+                                                    height: 11
+                                                    radius: 2
 
-                                                QQC2.ToolTip.visible: globalCellHover.hovered && cellData !== null
-                                                QQC2.ToolTip.text: cellData ? (cellData.date + (cellData.isFuture ? " (" + i18n("Future") + ")" : ": " + cellData.completedCount + " " + i18n("completed"))) : ""
+                                                    color: {
+                                                        if (!cellData || cellData.isFuture) return Kirigami.Theme.disabledTextColor
+                                                        var intensity = cellData.intensity || 0
+                                                        if (intensity === 0) return Qt.rgba(Kirigami.Theme.textColor.r, Kirigami.Theme.textColor.g, Kirigami.Theme.textColor.b, 0.08)
+                                                        if (intensity === 1) return "#0e4429"
+                                                        if (intensity === 2) return "#006d32"
+                                                        if (intensity === 3) return "#26a641"
+                                                        return "#39d353"
+                                                    }
 
-                                                HoverHandler {
-                                                    id: globalCellHover
+                                                    opacity: (cellData && cellData.isFuture) ? 0.2 : 1.0
+
+                                                    border.width: (cellData && cellData.isToday) ? 1 : 0
+                                                    border.color: Kirigami.Theme.highlightColor
+
+                                                    QQC2.ToolTip.visible: globalCellHover.hovered && cellData !== null
+                                                    QQC2.ToolTip.text: cellData ? (cellData.date + (cellData.isFuture ? " (" + i18n("Future") + ")" : ": " + cellData.completedCount + " " + i18n("completed"))) : ""
+
+                                                    HoverHandler {
+                                                        id: globalCellHover
+                                                    }
                                                 }
                                             }
                                         }
@@ -146,25 +205,25 @@ Kirigami.ApplicationWindow {
                             Layout.preferredWidth: 10
                             Layout.preferredHeight: 10
                             radius: 2
-                            color: "#27ae60"
+                            color: "#0e4429"
                         }
                         Rectangle {
                             Layout.preferredWidth: 10
                             Layout.preferredHeight: 10
                             radius: 2
-                            color: "#2ecc71"
+                            color: "#006d32"
                         }
                         Rectangle {
                             Layout.preferredWidth: 10
                             Layout.preferredHeight: 10
                             radius: 2
-                            color: "#1abc9c"
+                            color: "#26a641"
                         }
                         Rectangle {
                             Layout.preferredWidth: 10
                             Layout.preferredHeight: 10
                             radius: 2
-                            color: "#16a085"
+                            color: "#39d353"
                         }
                         QQC2.Label {
                             text: i18n("More")
@@ -309,68 +368,122 @@ Kirigami.ApplicationWindow {
                         spacing: Kirigami.Units.smallSpacing
 
                         QQC2.Label {
-                            text: i18n("Contribution Grid (Mon–Sun, click any past or current cell to toggle)")
+                            text: habitModel.weekStartDay === "sunday"
+                                ? i18n("Contribution Grid (Sun–Sat, click any past or current cell to toggle)")
+                                : i18n("Contribution Grid (Mon–Sun, click any past or current cell to toggle)")
                             font.pointSize: Kirigami.Theme.smallFont.pointSize
                             opacity: 0.7
                         }
 
-                        // 52-week per-habit binary heatmap grid
+                        // 52-week per-habit binary heatmap grid with Month headers & Day labels
                         QQC2.ScrollView {
                             Layout.fillWidth: true
-                            Layout.preferredHeight: 110
+                            Layout.preferredHeight: 140
                             clip: true
                             QQC2.ScrollBar.vertical.policy: QQC2.ScrollBar.AlwaysOff
 
-                            Item {
-                                width: 52 * 14 + 40
-                                height: 7 * 14 + 10
+                            Row {
+                                spacing: 6
+                                topPadding: 4
+                                leftPadding: 4
 
-                                Row {
+                                // Left day labels (Mon, Wed, Fri)
+                                Column {
+                                    topPadding: 18 // align with cells below month labels
                                     spacing: 3
                                     Repeater {
-                                        model: 52
-                                        delegate: Column {
-                                            required property int index
-                                            readonly property int weekIdx: index
-                                            spacing: 3
+                                        model: habitModel.dayLabels
+                                        delegate: Item {
+                                            required property string modelData
+                                            width: 26
+                                            height: 11
+                                            QQC2.Label {
+                                                anchors.fill: parent
+                                                text: parent.modelData
+                                                font.pixelSize: 9
+                                                horizontalAlignment: Text.AlignRight
+                                                verticalAlignment: Text.AlignVCenter
+                                                opacity: 0.65
+                                            }
+                                        }
+                                    }
+                                }
 
-                                            Repeater {
-                                                model: 7
-                                                delegate: Rectangle {
-                                                    required property int index
-                                                    readonly property int dayIdx: index
-                                                    readonly property int cellIndex: weekIdx * 7 + dayIdx
-                                                    readonly property var cellData: (habitCard.heatmapCells && cellIndex < habitCard.heatmapCells.length) ? habitCard.heatmapCells[cellIndex] : null
+                                // Heatmap columns with top month labels
+                                Column {
+                                    spacing: 4
 
-                                                    width: 11
-                                                    height: 11
-                                                    radius: 2
+                                    // Top month labels row
+                                    Row {
+                                        spacing: 3
+                                        Repeater {
+                                            model: habitModel.monthLabels
+                                            delegate: Item {
+                                                required property string modelData
+                                                width: 11
+                                                height: 14
+                                                clip: false
+                                                QQC2.Label {
+                                                    visible: parent.modelData.length > 0
+                                                    text: parent.modelData
+                                                    font.pixelSize: 9
+                                                    font.bold: true
+                                                    opacity: 0.75
+                                                    anchors.left: parent.left
+                                                    anchors.verticalCenter: parent.verticalCenter
+                                                }
+                                            }
+                                        }
+                                    }
 
-                                                    color: {
-                                                        if (!cellData || cellData.isFuture) return Kirigami.Theme.disabledTextColor
-                                                        if (cellData.isCompleted) return habitCard.colorHex
-                                                        return Qt.rgba(Kirigami.Theme.textColor.r, Kirigami.Theme.textColor.g, Kirigami.Theme.textColor.b, 0.08)
-                                                    }
+                                    // 52 weeks x 7 days cells
+                                    Row {
+                                        spacing: 3
+                                        Repeater {
+                                            model: 52
+                                            delegate: Column {
+                                                required property int index
+                                                readonly property int weekIdx: index
+                                                spacing: 3
 
-                                                    opacity: (cellData && cellData.isFuture) ? 0.2 : 1.0
+                                                Repeater {
+                                                    model: 7
+                                                    delegate: Rectangle {
+                                                        required property int index
+                                                        readonly property int dayIdx: index
+                                                        readonly property int cellIndex: weekIdx * 7 + dayIdx
+                                                        readonly property var cellData: (habitCard.heatmapCells && cellIndex < habitCard.heatmapCells.length) ? habitCard.heatmapCells[cellIndex] : null
 
-                                                    border.width: (cellData && cellData.isToday) ? 1 : 0
-                                                    border.color: Kirigami.Theme.highlightColor
+                                                        width: 11
+                                                        height: 11
+                                                        radius: 2
 
-                                                    QQC2.ToolTip.visible: cellHover.hovered && cellData !== null
-                                                    QQC2.ToolTip.text: cellData ? (cellData.date + (cellData.isFuture ? " (" + i18n("Future") + ")" : (cellData.isCompleted ? ": " + i18n("Completed") : ": " + i18n("Missed")))) : ""
+                                                        color: {
+                                                            if (!cellData || cellData.isFuture) return Kirigami.Theme.disabledTextColor
+                                                            if (cellData.isCompleted) return habitCard.colorHex
+                                                            return Qt.rgba(Kirigami.Theme.textColor.r, Kirigami.Theme.textColor.g, Kirigami.Theme.textColor.b, 0.08)
+                                                        }
 
-                                                    HoverHandler {
-                                                        id: cellHover
-                                                    }
+                                                        opacity: (cellData && cellData.isFuture) ? 0.2 : 1.0
 
-                                                    MouseArea {
-                                                        anchors.fill: parent
-                                                        enabled: cellData !== null && !cellData.isFuture && !habitCard.isArchived
-                                                        cursorShape: enabled ? Qt.PointingHandCursor : Qt.ArrowCursor
-                                                        onClicked: {
-                                                            if (cellData) {
-                                                                habitModel.toggleCompletion(habitCard.id, cellData.date)
+                                                        border.width: (cellData && cellData.isToday) ? 1 : 0
+                                                        border.color: Kirigami.Theme.highlightColor
+
+                                                        QQC2.ToolTip.visible: cellHover.hovered && cellData !== null
+                                                        QQC2.ToolTip.text: cellData ? (cellData.date + (cellData.isFuture ? " (" + i18n("Future") + ")" : (cellData.isCompleted ? ": " + i18n("Completed") : ": " + i18n("Missed")))) : ""
+
+                                                        HoverHandler {
+                                                            id: cellHover
+                                                        }
+
+                                                        MouseArea {
+                                                            anchors.fill: parent
+                                                            enabled: cellData !== null && !cellData.isFuture && !habitCard.isArchived
+                                                            cursorShape: enabled ? Qt.PointingHandCursor : Qt.ArrowCursor
+                                                            onClicked: {
+                                                                if (cellData) {
+                                                                    habitModel.toggleCompletion(habitCard.id, cellData.date)
+                                                                }
                                                             }
                                                         }
                                                     }
@@ -411,6 +524,30 @@ Kirigami.ApplicationWindow {
                 habitModel.removeHabit(targetId)
                 targetId = -1
                 targetName = ""
+            }
+        }
+    }
+
+    // General Settings Dialog
+    Kirigami.Dialog {
+        id: settingsDialog
+        title: i18n("General Settings")
+        standardButtons: Kirigami.Dialog.Close
+        preferredWidth: Kirigami.Units.gridUnit * 22
+
+        ColumnLayout {
+            spacing: Kirigami.Units.largeSpacing
+
+            Kirigami.FormLayout {
+                QQC2.ComboBox {
+                    id: weekStartCombo
+                    Kirigami.FormData.label: i18n("Start of the week:")
+                    model: [i18n("Monday"), i18n("Sunday")]
+                    currentIndex: habitModel.weekStartDay === "sunday" ? 1 : 0
+                    onActivated: function(index) {
+                        habitModel.weekStartDay = (index === 1) ? "sunday" : "monday"
+                    }
+                }
             }
         }
     }

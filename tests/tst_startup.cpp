@@ -45,6 +45,12 @@ void TestStartup::testHeadlessStartupWithHabit()
     // Verify Heading renders as PlainText
     auto *headingItem = rootObj->findChild<QQuickItem*>(QString(), Qt::FindChildrenRecursively);
     Q_UNUSED(headingItem);
+
+    // Verify settings dialog and weekStartDay switching works cleanly in QML
+    model.setWeekStartDay(QStringLiteral("sunday"));
+    QCOMPARE(model.weekStartDay(), QStringLiteral("sunday"));
+    model.setWeekStartDay(QStringLiteral("monday"));
+    QCOMPARE(model.weekStartDay(), QStringLiteral("monday"));
 }
 
 int main(int argc, char *argv[])

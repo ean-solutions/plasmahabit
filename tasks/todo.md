@@ -52,17 +52,17 @@ See [`tasks/plan.md`](file:///home/Eze/projects/plasmahabit/tasks/plan.md) for a
   - **Dependencies:** Task 8, Task 9
   - **Files:** `src/models/HabitModel.h`, `src/models/HabitModel.cpp`, `tests/tst_habitmodel.cpp` (Small: 3 files)
 
-- [ ] **Task 11: Update `Main.qml` with GitHub Heatmap Axes, Global Green Color Scale, and General Settings Dialog**
+- [x] **Task 11: Update `Main.qml` with GitHub Heatmap Axes, Global Green Color Scale, and General Settings Dialog**
   - **Acceptance:**
-    - [ ] Both the Global Combined Heatmap and each Per-Habit Binary Heatmap render aligned top month labels (`habitModel.monthLabels`) and left `Mon`/`Wed`/`Fri` day labels (`habitModel.dayLabels`).
-    - [ ] The Global Combined Heatmap and its *Less → More* legend use `#0e4429` (intensity 1), `#006d32` (intensity 2), `#26a641` (intensity 3), and `#39d353` (intensity 4), while individual habit heatmaps keep their binary `colorHex`.
-    - [ ] Clicking the **"Settings"** toolbar action opens the General Settings dialog (in English) with the **"Start of the week"** (`Monday` / `Sunday`) selector, updating `habitModel.weekStartDay` and all UI elements immediately.
+    - [x] Both the Global Combined Heatmap and each Per-Habit Binary Heatmap render aligned top month labels (`habitModel.monthLabels`) and left `Mon`/`Wed`/`Fri` day labels (`habitModel.dayLabels`).
+    - [x] The Global Combined Heatmap and its *Less → More* legend use `#0e4429` (intensity 1), `#006d32` (intensity 2), `#26a641` (intensity 3), and `#39d353` (intensity 4), while individual habit heatmaps keep their binary `colorHex`.
+    - [x] Clicking the **"Settings"** toolbar action opens the General Settings dialog (in English) with the **"Start of the week"** (`Monday` / `Sunday`) selector, updating `habitModel.weekStartDay` and all UI elements immediately.
   - **Verify:** `cmake --build build --parallel && ctest --test-dir build --output-on-failure`
   - **Dependencies:** Task 10
   - **Files:** `src/ui/Main.qml`, `tests/tst_startup.cpp` (Small: 2 files)
 
 ### Checkpoint: Complete (After Tasks 10–11)
-- [ ] All unit, database, model, and startup tests pass (`ctest --test-dir build --output-on-failure`)
-- [ ] Application builds cleanly with zero warnings or QML errors
-- [ ] All acceptance criteria in [SPEC.md](file:///home/Eze/projects/plasmahabit/SPEC.md) are met
-- [ ] Ready for human review
+- [x] All unit, database, model, and startup tests pass (`ctest --test-dir build --output-on-failure`)
+- [x] Application builds cleanly with zero warnings or QML errors
+- [x] All acceptance criteria in [SPEC.md](file:///home/Eze/projects/plasmahabit/SPEC.md) are met
+- [x] Ready for human review
