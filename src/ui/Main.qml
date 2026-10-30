@@ -531,9 +531,62 @@ Kirigami.ApplicationWindow {
     // General Settings Dialog
     Kirigami.Dialog {
         id: settingsDialog
+        objectName: "settingsDialog"
         title: i18n("General Settings")
-        standardButtons: Kirigami.Dialog.Close
         preferredWidth: Kirigami.Units.gridUnit * 22
+
+        property alias saveButton: saveBtnRef.button
+        property string initialWeekStart: habitModel.weekStartDay
+        property string pendingWeekStart: habitModel.weekStartDay
+        readonly property bool hasChanges: pendingWeekStart !== initialWeekStart
+
+        QtObject {
+            id: saveBtnRef
+            property var button: null
+        }
+
+        customFooterActions: [
+            Kirigami.Action {
+                id: saveAction
+                objectName: "saveAction"
+                text: i18n("Save")
+                icon.name: "document-save"
+                enabled: settingsDialog.hasChanges
+                onTriggered: {
+                    settingsDialog.accept()
+                }
+            },
+            Kirigami.Action {
+                id: cancelAction
+                objectName: "cancelAction"
+                text: i18n("Cancel")
+                icon.name: "dialog-cancel"
+                onTriggered: {
+                    settingsDialog.reject()
+                }
+            }
+        ]
+
+        function resetForm() {
+            initialWeekStart = habitModel.weekStartDay
+            pendingWeekStart = habitModel.weekStartDay
+            weekStartCombo.currentIndex = (initialWeekStart === "sunday") ? 1 : 0
+        }
+
+        onOpened: {
+            resetForm()
+        }
+
+        onAccepted: {
+            if (hasChanges) {
+                habitModel.weekStartDay = pendingWeekStart
+                initialWeekStart = habitModel.weekStartDay
+            }
+        }
+
+        onRejected: {
+            resetForm()
+        }
 
         ColumnLayout {
             spacing: Kirigami.Units.largeSpacing
@@ -541,11 +594,17 @@ Kirigami.ApplicationWindow {
             Kirigami.FormLayout {
                 QQC2.ComboBox {
                     id: weekStartCombo
+                    objectName: "weekStartCombo"
                     Kirigami.FormData.label: i18n("Start of the week:")
                     model: [i18n("Monday"), i18n("Sunday")]
                     currentIndex: habitModel.weekStartDay === "sunday" ? 1 : 0
+                    onCurrentIndexChanged: {
+                        settingsDialog.pendingWeekStart = (currentIndex === 1) ? "sunday" : "monday"
+                        settingsDialog.updateSaveButton()
+                    }
                     onActivated: function(index) {
-                        habitModel.weekStartDay = (index === 1) ? "sunday" : "monday"
+                        settingsDialog.pendingWeekStart = (index === 1) ? "sunday" : "monday"
+                        settingsDialog.updateSaveButton()
                     }
                 }
             }
