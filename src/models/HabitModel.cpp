@@ -1,13 +1,22 @@
 #include "models/HabitModel.h"
 #include "domain/HabitValidation.h"
+#include <QLocale>
 
 namespace PlasmaHabit {
 
 namespace {
 
-QDate mondayOfWeek(const QDate &date)
+int dayOffsetInWeek(const QDate &date, Qt::DayOfWeek weekStartDay)
 {
-    return date.addDays(-(date.dayOfWeek() - 1));
+    if (weekStartDay == Qt::Sunday) {
+        return date.dayOfWeek() % 7;
+    }
+    return date.dayOfWeek() - 1;
+}
+
+QDate startOfWeek(const QDate &date, Qt::DayOfWeek weekStartDay)
+{
+    return date.addDays(-dayOffsetInWeek(date, weekStartDay));
 }
 
 } // namespace
@@ -126,19 +135,20 @@ void HabitModel::reload()
     m_items.clear();
 
     const QDate today = QDate::currentDate();
-    const QDate currentMon = mondayOfWeek(today);
+    const Qt::DayOfWeek startDay = m_dbManager ? m_dbManager->weekStartDay() : Qt::Monday;
+    const QDate currentWeekStart = startOfWeek(today, startDay);
 
     const auto records = m_dbManager->fetchHabits(m_showArchived);
     for (const auto &rec : records) {
         HabitItem item;
         item.record = rec;
         item.completions = m_dbManager->fetchCompletions(rec.id);
-        item.stats = StreakCalculator::calculate(rec.frequencyType, rec.targetCount, item.completions, today);
+        item.stats = StreakCalculator::calculate(rec.frequencyType, rec.targetCount, item.completions, today, startDay);
         item.completedToday = item.completions.contains(today);
 
         int weeklyCount = 0;
         for (int d = 0; d < 7; ++d) {
-            if (item.completions.contains(currentMon.addDays(d))) {
+            if (item.completions.contains(currentWeekStart.addDays(d))) {
                 weeklyCount++;
             }
         }
@@ -157,6 +167,7 @@ void HabitModel::reload()
     Q_EMIT countChanged();
     Q_EMIT totalActiveCountChanged();
     Q_EMIT globalHeatmapChanged();
+    Q_EMIT monthLabelsChanged();
 }
 
 bool HabitModel::addHabit(const QString &name, const QString &frequencyType, int targetCount, const QString &colorHex)
@@ -263,16 +274,17 @@ QVariantList HabitModel::computeHeatmapCells(const HabitItem &item) const
 {
     QVariantList cells;
     const QDate today = QDate::currentDate();
-    const QDate currentMon = mondayOfWeek(today);
-    const QDate startMon = currentMon.addDays(-51 * 7);
+    const Qt::DayOfWeek startDay = m_dbManager ? m_dbManager->weekStartDay() : Qt::Monday;
+    const QDate curWeekStart = startOfWeek(today, startDay);
+    const QDate startWeek = curWeekStart.addDays(-51 * 7);
 
     for (int week = 0; week < 52; ++week) {
-        const QDate weekMon = startMon.addDays(week * 7);
-        for (int dayOfWeek = 0; dayOfWeek < 7; ++dayOfWeek) {
-            const QDate cellDate = weekMon.addDays(dayOfWeek);
+        const QDate weekStart = startWeek.addDays(week * 7);
+        for (int dayIdx = 0; dayIdx < 7; ++dayIdx) {
+            const QDate cellDate = weekStart.addDays(dayIdx);
             QVariantMap cell;
             cell[QStringLiteral("date")] = cellDate.toString(Qt::ISODate);
-            cell[QStringLiteral("dayOfWeek")] = dayOfWeek; // 0=Mon .. 6=Sun
+            cell[QStringLiteral("dayOfWeek")] = dayIdx; // 0..6 relative to week start
             cell[QStringLiteral("weekIndex")] = week;
             cell[QStringLiteral("isCompleted")] = item.completions.contains(cellDate);
             cell[QStringLiteral("isFuture")] = (cellDate > today);
@@ -313,13 +325,14 @@ QVariantList HabitModel::globalHeatmap() const
     }
 
     const QDate today = QDate::currentDate();
-    const QDate currentMon = mondayOfWeek(today);
-    const QDate startMon = currentMon.addDays(-51 * 7);
+    const Qt::DayOfWeek startDay = m_dbManager ? m_dbManager->weekStartDay() : Qt::Monday;
+    const QDate curWeekStart = startOfWeek(today, startDay);
+    const QDate startWeek = curWeekStart.addDays(-51 * 7);
 
     for (int week = 0; week < 52; ++week) {
-        const QDate weekMon = startMon.addDays(week * 7);
-        for (int dayOfWeek = 0; dayOfWeek < 7; ++dayOfWeek) {
-            const QDate cellDate = weekMon.addDays(dayOfWeek);
+        const QDate weekStart = startWeek.addDays(week * 7);
+        for (int dayIdx = 0; dayIdx < 7; ++dayIdx) {
+            const QDate cellDate = weekStart.addDays(dayIdx);
             const int count = dateCompletionCount.value(cellDate, 0);
 
             int intensity = 0;
@@ -338,7 +351,7 @@ QVariantList HabitModel::globalHeatmap() const
 
             QVariantMap cell;
             cell[QStringLiteral("date")] = cellDate.toString(Qt::ISODate);
-            cell[QStringLiteral("dayOfWeek")] = dayOfWeek;
+            cell[QStringLiteral("dayOfWeek")] = dayIdx;
             cell[QStringLiteral("weekIndex")] = week;
             cell[QStringLiteral("completedCount")] = count;
             cell[QStringLiteral("intensity")] = intensity; // 0..4
@@ -349,6 +362,108 @@ QVariantList HabitModel::globalHeatmap() const
     }
 
     return cells;
+}
+
+QString HabitModel::weekStartDay() const
+{
+    if (!m_dbManager) {
+        return QStringLiteral("monday");
+    }
+    return (m_dbManager->weekStartDay() == Qt::Sunday) ? QStringLiteral("sunday") : QStringLiteral("monday");
+}
+
+void HabitModel::setWeekStartDay(const QString &day)
+{
+    if (!m_dbManager) {
+        return;
+    }
+
+    const QString lower = day.trimmed().toLower();
+    const Qt::DayOfWeek newDay = (lower == QStringLiteral("sunday")) ? Qt::Sunday : Qt::Monday;
+
+    if (m_dbManager->weekStartDay() != newDay) {
+        m_dbManager->setWeekStartDay(newDay);
+        Q_EMIT weekStartDayChanged();
+        reload();
+    }
+}
+
+QStringList HabitModel::dayLabels() const
+{
+    const Qt::DayOfWeek startDay = m_dbManager ? m_dbManager->weekStartDay() : Qt::Monday;
+    if (startDay == Qt::Sunday) {
+        // Rows: Sun(0), Mon(1), Tue(2), Wed(3), Thu(4), Fri(5), Sat(6)
+        return {
+            QStringLiteral(""),
+            QStringLiteral("Mon"),
+            QStringLiteral(""),
+            QStringLiteral("Wed"),
+            QStringLiteral(""),
+            QStringLiteral("Fri"),
+            QStringLiteral("")
+        };
+    }
+    // Rows: Mon(0), Tue(1), Wed(2), Thu(3), Fri(4), Sat(5), Sun(6)
+    return {
+        QStringLiteral("Mon"),
+        QStringLiteral(""),
+        QStringLiteral("Wed"),
+        QStringLiteral(""),
+        QStringLiteral("Fri"),
+        QStringLiteral(""),
+        QStringLiteral("")
+    };
+}
+
+QVariantList HabitModel::monthLabels() const
+{
+    QVariantList labels;
+    const QDate today = QDate::currentDate();
+    const Qt::DayOfWeek startDay = m_dbManager ? m_dbManager->weekStartDay() : Qt::Monday;
+    const QDate curWeekStart = startOfWeek(today, startDay);
+    const QDate startWeek = curWeekStart.addDays(-51 * 7);
+
+    // English month abbreviations
+    const QString monthNames[] = {
+        QStringLiteral(""),
+        QStringLiteral("Jan"), QStringLiteral("Feb"), QStringLiteral("Mar"), QStringLiteral("Apr"),
+        QStringLiteral("May"), QStringLiteral("Jun"), QStringLiteral("Jul"), QStringLiteral("Aug"),
+        QStringLiteral("Sep"), QStringLiteral("Oct"), QStringLiteral("Nov"), QStringLiteral("Dec")
+    };
+
+    QList<QDate> weekDates;
+    weekDates.reserve(52);
+    for (int w = 0; w < 52; ++w) {
+        weekDates.append(startWeek.addDays(w * 7));
+    }
+
+    for (int w = 0; w < 52; ++w) {
+        const QDate d = weekDates[w];
+        QString labelText;
+
+        if (w == 0) {
+            // Only show col 0 if cols 1 and 2 don't start a new month (prevent overlap)
+            bool nextSoonChanges = false;
+            if (w + 1 < 52 && weekDates[w + 1].month() != d.month()) {
+                nextSoonChanges = true;
+            }
+            if (w + 2 < 52 && weekDates[w + 2].month() != d.month()) {
+                nextSoonChanges = true;
+            }
+            if (!nextSoonChanges) {
+                labelText = monthNames[d.month()];
+            }
+        } else {
+            const QDate prevD = weekDates[w - 1];
+            if (d.month() != prevD.month()) {
+                labelText = monthNames[d.month()];
+            }
+        }
+
+        labels.append(labelText);
+    }
+
+    return labels;
 }
 
 } // namespace PlasmaHabit

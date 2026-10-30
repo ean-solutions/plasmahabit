@@ -26,6 +26,9 @@ class HabitModel : public QAbstractListModel
     Q_PROPERTY(int totalActiveCount READ totalActiveCount NOTIFY totalActiveCountChanged)
     Q_PROPERTY(QString lastError READ lastError NOTIFY lastErrorChanged)
     Q_PROPERTY(QVariantList globalHeatmap READ globalHeatmap NOTIFY globalHeatmapChanged)
+    Q_PROPERTY(QString weekStartDay READ weekStartDay WRITE setWeekStartDay NOTIFY weekStartDayChanged)
+    Q_PROPERTY(QStringList dayLabels READ dayLabels NOTIFY weekStartDayChanged)
+    Q_PROPERTY(QVariantList monthLabels READ monthLabels NOTIFY monthLabelsChanged)
 
 public:
     enum HabitRoles {
@@ -55,6 +58,10 @@ public:
     [[nodiscard]] int totalActiveCount() const;
     [[nodiscard]] QString lastError() const;
     [[nodiscard]] QVariantList globalHeatmap() const;
+    [[nodiscard]] QString weekStartDay() const;
+    void setWeekStartDay(const QString &day);
+    [[nodiscard]] QStringList dayLabels() const;
+    [[nodiscard]] QVariantList monthLabels() const;
 
     void setStartupError(const QString &error);
 
@@ -71,6 +78,8 @@ Q_SIGNALS:
     void totalActiveCountChanged();
     void lastErrorChanged();
     void globalHeatmapChanged();
+    void weekStartDayChanged();
+    void monthLabelsChanged();
 
 private:
     DatabaseManager *m_dbManager;

@@ -16,6 +16,8 @@ private Q_SLOTS:
     void testModelHeatmapCellsGeneration();
     void testGlobalHeatmapIntensityLevels();
     void testToggleTodayMethod();
+    void testWeekStartDayAndLabels();
+    void testWeekStartDayWeeklyStreakRecalculation();
 };
 
 void TestHabitModel::testModelCrudAndFilter()
@@ -162,6 +164,70 @@ void TestHabitModel::testToggleTodayMethod()
     QCOMPARE(model.data(model.index(0, 0), HabitModel::CompletedTodayRole).toBool(), true);
     QVERIFY(model.toggleToday(habitId));
     QCOMPARE(model.data(model.index(0, 0), HabitModel::CompletedTodayRole).toBool(), false);
+}
+
+void TestHabitModel::testWeekStartDayAndLabels()
+{
+    QTemporaryDir tempDir;
+    DatabaseManager db;
+    QVERIFY(db.initialize(tempDir.filePath(QStringLiteral("test_labels.sqlite3"))));
+
+    HabitModel model(&db);
+
+    // Initial default: monday
+    QCOMPARE(model.weekStartDay(), QStringLiteral("monday"));
+
+    // Day labels for monday start: Mon (0), Wed (2), Fri (4)
+    QStringList monDayLabels = model.dayLabels();
+    QCOMPARE(monDayLabels.size(), 7);
+    QCOMPARE(monDayLabels[0], QStringLiteral("Mon"));
+    QCOMPARE(monDayLabels[1], QStringLiteral(""));
+    QCOMPARE(monDayLabels[2], QStringLiteral("Wed"));
+    QCOMPARE(monDayLabels[3], QStringLiteral(""));
+    QCOMPARE(monDayLabels[4], QStringLiteral("Fri"));
+    QCOMPARE(monDayLabels[5], QStringLiteral(""));
+    QCOMPARE(monDayLabels[6], QStringLiteral(""));
+
+    // Month labels: 52 entries
+    QVariantList monMonthLabels = model.monthLabels();
+    QCOMPARE(monMonthLabels.size(), 52);
+
+    // Change to sunday start
+    model.setWeekStartDay(QStringLiteral("sunday"));
+    QCOMPARE(model.weekStartDay(), QStringLiteral("sunday"));
+
+    // Day labels for sunday start: Sun (0, empty), Mon (1), Wed (3), Fri (5)
+    QStringList sunDayLabels = model.dayLabels();
+    QCOMPARE(sunDayLabels.size(), 7);
+    QCOMPARE(sunDayLabels[0], QStringLiteral(""));
+    QCOMPARE(sunDayLabels[1], QStringLiteral("Mon"));
+    QCOMPARE(sunDayLabels[2], QStringLiteral(""));
+    QCOMPARE(sunDayLabels[3], QStringLiteral("Wed"));
+    QCOMPARE(sunDayLabels[4], QStringLiteral(""));
+    QCOMPARE(sunDayLabels[5], QStringLiteral("Fri"));
+    QCOMPARE(sunDayLabels[6], QStringLiteral(""));
+}
+
+void TestHabitModel::testWeekStartDayWeeklyStreakRecalculation()
+{
+    QTemporaryDir tempDir;
+    DatabaseManager db;
+    QVERIFY(db.initialize(tempDir.filePath(QStringLiteral("test_weekly_switch.sqlite3"))));
+
+    HabitModel model(&db);
+    QVERIFY(model.addHabit(QStringLiteral("Guitar Practice"), QStringLiteral("weekly"), 1, QStringLiteral("#e67e22")));
+    int habitId = model.data(model.index(0, 0), HabitModel::IdRole).toInt();
+
+    // Today is Sunday 2026-10-25. Mark it completed.
+    const QString sunDateStr = QStringLiteral("2026-10-25");
+    // Under Monday start, this Sunday belongs to the Mon 2026-10-19 week.
+    // Under Sunday start, this Sunday starts the new Sun 2026-10-25 week.
+    QVERIFY(model.toggleCompletion(habitId, sunDateStr));
+
+    // Switching weekStartDay reloads model and updates weekly progress / cells
+    model.setWeekStartDay(QStringLiteral("sunday"));
+    QCOMPARE(model.weekStartDay(), QStringLiteral("sunday"));
+    QCOMPARE(db.weekStartDay(), Qt::Sunday);
 }
 
 QTEST_MAIN(TestHabitModel)

@@ -43,11 +43,11 @@ See [`tasks/plan.md`](file:///home/Eze/projects/plasmahabit/tasks/plan.md) for a
 
 ## Phase 5: Heatmap Axes, Color Scale & General Settings UI
 
-- [ ] **Task 10: Expose `weekStartDay`, `dayLabels`, and `monthLabels` in `HabitModel`**
+- [x] **Task 10: Expose `weekStartDay`, `dayLabels`, and `monthLabels` in `HabitModel`**
   - **Acceptance:**
-    - [ ] `HabitModel` exposes `weekStartDay`, `dayLabels`, and `monthLabels` with change notifications (`weekStartDayChanged`, `globalHeatmapChanged`) and persists `weekStartDay` changes via `DatabaseManager`.
-    - [ ] Changing `weekStartDay` between `"monday"` and `"sunday"` immediately shifts heatmap cell dates (`dayOfWeek` 0..6), updates `dayLabels` (`Mon`/`Wed`/`Fri` at indices `0, 2, 4` vs `1, 3, 5`), updates `monthLabels`, and recomputes weekly progress and streaks.
-    - [ ] `tests/tst_habitmodel.cpp` verifies `dayLabels`, `monthLabels` length/content, heatmap cell start-of-week alignment, and reactive weekly streak/progress updates when `weekStartDay` changes.
+    - [x] `HabitModel` exposes `weekStartDay`, `dayLabels`, and `monthLabels` with change notifications (`weekStartDayChanged`, `globalHeatmapChanged`) and persists `weekStartDay` changes via `DatabaseManager`.
+    - [x] Changing `weekStartDay` between `"monday"` and `"sunday"` immediately shifts heatmap cell dates (`dayOfWeek` 0..6), updates `dayLabels` (`Mon`/`Wed`/`Fri` at indices `0, 2, 4` vs `1, 3, 5`), updates `monthLabels`, and recomputes weekly progress and streaks.
+    - [x] `tests/tst_habitmodel.cpp` verifies `dayLabels`, `monthLabels` length/content, heatmap cell start-of-week alignment, and reactive weekly streak/progress updates when `weekStartDay` changes.
   - **Verify:** `cmake --build build --parallel && ctest --test-dir build -R tst_habitmodel --output-on-failure`
   - **Dependencies:** Task 8, Task 9
   - **Files:** `src/models/HabitModel.h`, `src/models/HabitModel.cpp`, `tests/tst_habitmodel.cpp` (Small: 3 files)
