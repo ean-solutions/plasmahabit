@@ -2,6 +2,7 @@
 #include <QApplication>
 #include <QQmlApplicationEngine>
 #include <QQmlContext>
+#include <QQmlError>
 #include <QTemporaryDir>
 #include <QQuickItem>
 #include "db/DatabaseManager.h"
@@ -33,6 +34,14 @@ void TestStartup::testHeadlessStartupWithHabit()
     QCOMPARE(model.rowCount(), 1);
 
     QQmlApplicationEngine engine;
+    QStringList mainQmlTypeErrors;
+    QObject::connect(&engine, &QQmlApplicationEngine::warnings, &engine, [&](const QList<QQmlError> &warnings) {
+        for (const auto &w : warnings) {
+            if (w.toString().contains(QStringLiteral("TypeError"))) {
+                mainQmlTypeErrors.append(w.toString());
+            }
+        }
+    });
     engine.rootContext()->setContextProperty(QStringLiteral("habitModel"), &model);
 
     const QUrl url(QStringLiteral("qrc:/qt/qml/org/eansolutions/plasmahabit/ui/Main.qml"));
@@ -52,6 +61,7 @@ void TestStartup::testHeadlessStartupWithHabit()
     QCOMPARE(model.weekStartDay(), QStringLiteral("sunday"));
     model.setWeekStartDay(QStringLiteral("monday"));
     QCOMPARE(model.weekStartDay(), QStringLiteral("monday"));
+    QCOMPARE(mainQmlTypeErrors, QStringList());
 }
 
 void TestStartup::testSettingsDialogSaveAndCancelBehavior()
@@ -66,6 +76,14 @@ void TestStartup::testSettingsDialogSaveAndCancelBehavior()
     QCOMPARE(model.weekStartDay(), QStringLiteral("monday"));
 
     QQmlApplicationEngine engine;
+    QStringList mainQmlTypeErrors;
+    QObject::connect(&engine, &QQmlApplicationEngine::warnings, &engine, [&](const QList<QQmlError> &warnings) {
+        for (const auto &w : warnings) {
+            if (w.toString().contains(QStringLiteral("TypeError"))) {
+                mainQmlTypeErrors.append(w.toString());
+            }
+        }
+    });
     engine.rootContext()->setContextProperty(QStringLiteral("habitModel"), &model);
 
     const QUrl url(QStringLiteral("qrc:/qt/qml/org/eansolutions/plasmahabit/ui/Main.qml"));
@@ -92,6 +110,8 @@ void TestStartup::testSettingsDialogSaveAndCancelBehavior()
 
     // User changes combo to Sunday (index 1)
     weekStartCombo->setProperty("currentIndex", 1);
+    QMetaObject::invokeMethod(weekStartCombo, "activated", Q_ARG(int, 1));
+    QCOMPARE(mainQmlTypeErrors, QStringList());
 
     // Save button must now be enabled
     QCOMPARE(saveAction->property("enabled").toBool(), true);

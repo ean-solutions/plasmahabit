@@ -535,15 +535,9 @@ Kirigami.ApplicationWindow {
         title: i18n("General Settings")
         preferredWidth: Kirigami.Units.gridUnit * 22
 
-        property alias saveButton: saveBtnRef.button
         property string initialWeekStart: habitModel.weekStartDay
         property string pendingWeekStart: habitModel.weekStartDay
         readonly property bool hasChanges: pendingWeekStart !== initialWeekStart
-
-        QtObject {
-            id: saveBtnRef
-            property var button: null
-        }
 
         customFooterActions: [
             Kirigami.Action {
@@ -600,11 +594,9 @@ Kirigami.ApplicationWindow {
                     currentIndex: habitModel.weekStartDay === "sunday" ? 1 : 0
                     onCurrentIndexChanged: {
                         settingsDialog.pendingWeekStart = (currentIndex === 1) ? "sunday" : "monday"
-                        settingsDialog.updateSaveButton()
                     }
                     onActivated: function(index) {
                         settingsDialog.pendingWeekStart = (index === 1) ? "sunday" : "monday"
-                        settingsDialog.updateSaveButton()
                     }
                 }
             }
